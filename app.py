@@ -61,27 +61,58 @@ if modulo == '1. Levantamiento y Cubicaciones':
   st.markdown('---')
   st.subheader('🛠️ Asignación de Partidas y Materiales')
 
-  # Diccionario con referencias de mercado chileno y unidades estándar
+  # Diccionario con referencias, unidades y el tipo de cálculo lógico correspondiente
   base_partidas = {
-      'Radier de Hormigón H-20': {'precio': 18500.0, 'unidad': 'm²'},
+      'Radier de Hormigón H-20': {
+          'precio': 18500.0,
+          'unidad': 'm²',
+          'tipo': 'piso',
+      },
       'Estructura Metalcom C 90x0.85 (Tabiques)': {
           'precio': 14200.0,
           'unidad': 'm²',
+          'tipo': 'muro',
       },
       'Placa Yeso Cartón Volcanita RH 12.5mm': {
           'precio': 9800.0,
           'unidad': 'm²',
+          'tipo': 'muro',
       },
-      'Cerámico Muro 30x60': {'precio': 22000.0, 'unidad': 'm²'},
-      'Porcelanato Piso 60x60': {'precio': 28500.0, 'unidad': 'm²'},
-      'Adhesivo Cerámico (25kg)': {'precio': 8900.0, 'unidad': 'saco'},
-      'Frague Flexible (1kg)': {'precio': 4500.0, 'unidad': 'kg'},
-      'Pintura Esmalte al Agua (Cielo)': {'precio': 6500.0, 'unidad': 'm²'},
+      'Cerámico Muro 30x60': {
+          'precio': 22000.0,
+          'unidad': 'm²',
+          'tipo': 'muro',
+      },
+      'Porcelanato Piso 60x60': {
+          'precio': 28500.0,
+          'unidad': 'm²',
+          'tipo': 'piso',
+      },
+      'Adhesivo Cerámico (25kg)': {
+          'precio': 8900.0,
+          'unidad': 'saco',
+          'tipo': 'insumo',
+      },
+      'Frague Flexible (1kg)': {
+          'precio': 4500.0,
+          'unidad': 'kg',
+          'tipo': 'insumo',
+      },
+      'Pintura Esmalte al Agua (Cielo)': {
+          'precio': 6500.0,
+          'unidad': 'm²',
+          'tipo': 'cielo',
+      },
       'Tubería PVC Sanitaria 110mm / 50mm': {
           'precio': 11000.0,
           'unidad': 'm',
+          'tipo': 'lineal',
       },
-      'Red Hidráulica PPR / Cobre': {'precio': 15000.0, 'unidad': 'm'},
+      'Red Hidráulica PPR / Cobre': {
+          'precio': 15000.0,
+          'unidad': 'm',
+          'tipo': 'lineal',
+      },
   }
 
   col_p1, col_p2, col_p3 = st.columns([2, 1, 1])
@@ -92,12 +123,25 @@ if modulo == '1. Levantamiento y Cubicaciones':
     datos_sugeridos = base_partidas[partida_seleccionada]
     precio_sugerido = datos_sugeridos['precio']
     unidad_medida = datos_sugeridos['unidad']
+    tipo_partida = datos_sugeridos['tipo']
+
+  # Lógica inteligente y automatizada de rendimientos según la naturaleza de la partida
+  if tipo_partida in ['piso', 'cielo']:
+    cantidad_sugerida = area_piso
+  elif tipo_partida == 'muro':
+    cantidad_sugerida = area_muros
+  elif tipo_partida == 'lineal':
+    cantidad_sugerida = perimetro
+  elif tipo_partida == 'insumo':
+    cantidad_sugerida = area_piso * 0.25  # Proporción estimada inicial
+  else:
+    cantidad_sugerida = 1.0
 
   with col_p2:
     cantidad_ingresada = st.number_input(
         f'Cantidad ({unidad_medida}) / Rendimiento',
         min_value=0.01,
-        value=float(round(area_piso, 2)),
+        value=float(round(cantidad_sugerida, 2)),
         step=0.1,
     )
   with col_p3:
