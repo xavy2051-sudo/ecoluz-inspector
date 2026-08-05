@@ -265,9 +265,9 @@ elif modulo == '4. Análisis de Precios Unitarios (APU)':
 
 # ----------------- MÓDULO 5 -----------------
 elif modulo == '5. Cierre Económico y Presupuesto':
-  st.subheader('📊 Módulo 5: Cotización Comercial Formal para el Cliente')
+  st.subheader('📊 Módulo 5: Cotización Comercial Amigable para el Cliente')
   st.markdown('---')
-  st.markdown('### 🏢 PROPUESTA ECONÓMICA Y TÉCNICA - ESPECIALIDADES ECOLUZ')
+  st.markdown('### 🏢 PROPUESTA ECONÓMICA - ESPECIALIDADES ECOLUZ')
 
   col_cot1, col_cot2 = st.columns(2)
   with col_cot1:
@@ -299,7 +299,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
         'Recinto',
         'Partida / Revestimiento',
         'Cantidad / m²',
-        'Total Parcial ($)',
+        'Total Parcial',
     ]
     st.dataframe(df_cliente, use_container_width=True)
 
@@ -325,11 +325,82 @@ elif modulo == '5. Cierre Económico y Presupuesto':
         f' `{total_presupuesto:,.0f}`'
     )
     st.markdown('---')
-    st.success(
-        '✨ Propuesta comercial formal generada con éxito, integrando de forma'
-        ' impecable las cubicaciones técnicas, partidas y valores finales'
-        ' listos para presentar.'
+
+    # SECCIÓN AMIGABLE: MENSAJE PARA WHATSAPP
+    st.markdown('### 💬 Mensaje Rápido para Enviar por WhatsApp / Chat')
+    mensaje_wsp = (
+        '🏡 *PROPUESTA ECONÓMICA - ECOLUZ SpA*\n\nEstimado(a) cliente,'
+        ' adjunto el resumen de la propuesta para su proyecto:\n\n'
     )
+    for index, row in df_cliente.iterrows():
+      mensaje_wsp += (
+          f'▪️ *{row["Recinto"]}* - {row["Partida / Revestimiento"]} '
+          f'(Cant: {row["Cantidad / m²"]}): ${row["Total Parcial"]:,.0f}\n'
+      )
+    mensaje_wsp += f'\n🚀 *VALOR TOTAL (CON IVA):* `${total_presupuesto:,.0f}`\n\nForma de Pago: 50% Anticipo - 50% Recepción Conforme.\nQuedamos atentos a sus comentarios. ¡Saludos cordiales!'
+
+    st.text_area(
+        'Copia este texto para enviarlo por WhatsApp:',
+        value=mensaje_wsp,
+        height=180,
+    )
+
+    st.markdown('---')
+
+    # DOCUMENTO HTML/PDF MODERNO Y CORPORATIVO
+    html_content = f"""
+        <html>
+        <head>
+            <title>Propuesta Comercial - ECOLUZ SpA</title>
+            <style>
+                body {{ font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #333; background-color: #f9f9f9; }}
+                .invoice-box {{ background: #fff; padding: 30px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }}
+                h1 {{ color: #1f4e78; margin-bottom: 5px; }}
+                .subtitle {{ color: #666; font-size: 14px; margin-bottom: 20px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; }}
+                th, td {{ border: 1px solid #e0e0e0; padding: 12px; text-align: left; font-size: 14px; }}
+                th {{ background-color: #1f4e78; color: white; }}
+                tr:nth-child(even) {{ background-color: #f8f9fa; }}
+                .summary {{ width: 50%; margin-left: auto; font-size: 14px; }}
+                .summary td {{ padding: 8px; border: none; }}
+                .total-row {{ font-size: 18px; font-weight: bold; color: #1f4e78; border-top: 2px solid #1f4e78; }}
+            </style>
+        </head>
+        <body>
+            <div class="invoice-box">
+                <h1>ECOLUZ SpA</h1>
+                <div class="subtitle">Constructor Civil | Concepción, Chile</div>
+                <hr style="border:0; border-top: 1px solid #ddd;">
+                
+                <h3>Detalle de Partidas y Cubicaciones</h3>
+                {df_cliente.to_html(index=False, classes='table')}
+                
+                <table class="summary">
+                    <tr><td><b>Costo Directo:</b></td><td style="text-align: right;">${costo_directo:,.0f}</td></tr>
+                    <tr><td><b>GG y Utilidad (25%):</b></td><td style="text-align: right;">${(costo_gg + costo_util):,.0f}</td></tr>
+                    <tr><td><b>Subtotal Neto:</b></td><td style="text-align: right;">${subtotal_neto:,.0f}</td></tr>
+                    <tr><td><b>IVA (19%):</b></td><td style="text-align: right;">${iva:,.0f}</td></tr>
+                    <tr class="total-row"><td>VALOR TOTAL (CON IVA):</td><td style="text-align: right;">${total_presupuesto:,.0f}</td></tr>
+                </table>
+                <p style="font-size: 12px; color: #777; text-align: center; margin-top: 40px;">Validez de la oferta: 15 días. Forma de pago: 50% anticipo - 50% recepción conforme.</p>
+            </div>
+        </body>
+        </html>
+        """
+
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+      st.download_button(
+          label='📥 Descargar Propuesta Formato PDF / HTML',
+          data=html_content,
+          file_name='Cotizacion_Ecoluz.html',
+          mime='text/html',
+      )
+    with col_btn2:
+      st.success(
+          '✨ ¡Todo listo! Copia el texto para WhatsApp o descarga el'
+          ' documento para imprimir/guardar en PDF.'
+      )
   else:
     st.warning(
         '⚠️ No hay información de partidas registradas. Complete primero el'
