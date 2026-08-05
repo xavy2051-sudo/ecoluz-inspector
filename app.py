@@ -402,6 +402,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
           ' documento para imprimir/guardar en PDF.'
       )
   else:
+      
     st.warning(
         '⚠️ No hay información de partidas registradas. Complete primero el'
         ' Módulo 1.'
