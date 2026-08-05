@@ -267,7 +267,7 @@ elif modulo == '4. Análisis de Precios Unitarios (APU)':
 elif modulo == '5. Cierre Económico y Presupuesto':
   st.subheader('📊 Módulo 5: Cotización Comercial Formal para el Cliente')
   st.markdown('---')
-  st.markdown('### 🏢 PROPUESTA ECONÓMICA - ESPECIALIDADES ECOLUZ')
+  st.markdown('### 🏢 PROPUESTA ECONÓMICA Y TÉCNICA - ESPECIALIDADES ECOLUZ')
 
   col_cot1, col_cot2 = st.columns(2)
   with col_cot1:
@@ -282,32 +282,53 @@ elif modulo == '5. Cierre Económico y Presupuesto':
   todos_los_datos = []
   for recinto, items in st.session_state['partidas_recintos'].items():
     for item in items:
-      todos_los_datos.append(item)
+      fila = item.copy()
+      fila['Recinto'] = recinto
+      todos_los_datos.append(fila)
 
   if todos_los_datos:
-    df_total = pd.DataFrame(todos_los_datos)
-    costo_directo = df_total['Costo Total'].sum()
+    df_cot = pd.DataFrame(todos_los_datos)
+
+    st.markdown(
+        '#### 📋 Detalle de Partidas, Cubicaciones y Valores por Recinto'
+    )
+    df_cliente = df_cot[
+        ['Recinto', 'Partida', 'Cantidad', 'Costo Total']
+    ].copy()
+    df_cliente.columns = [
+        'Recinto',
+        'Partida / Revestimiento',
+        'Cantidad / m²',
+        'Total Parcial ($)',
+    ]
+    st.dataframe(df_cliente, use_container_width=True)
+
+    costo_directo = df_cot['Costo Total'].sum()
     costo_gg = costo_directo * 0.10
     costo_util = costo_directo * 0.15
     subtotal_neto = costo_directo + costo_gg + costo_util
     iva = subtotal_neto * 0.19
     total_presupuesto = subtotal_neto + iva
 
-    st.markdown('#### Resumen Económico General de la Propuesta')
+    st.markdown('---')
+    st.markdown('#### 📊 Resumen Financiero de la Propuesta')
     st.markdown(f'- **Costo Directo de Obras:** 💲 `{costo_directo:,.0f}`')
-    st.markdown(f'- **Gastos Generales y Utilidad:** 💲 `{(costo_gg + costo_util):,.0f}`')
-    st.markdown(f'- **Neto Afecto:** 💲 `{subtotal_neto:,.0f}`')
+    st.markdown(
+        f'- **Gastos Generales y Utilidad (25%):** 💲'
+        f' `{(costo_gg + costo_util):,.0f}`'
+    )
+    st.markdown(f'- **Subtotal Neto:** 💲 `{subtotal_neto:,.0f}`')
     st.markdown(f'- **IVA (19%):** 💲 `{iva:,.0f}`')
     st.markdown('---')
     st.markdown(
-        f'## 💰 **VALOR TOTAL A PAGAR POR EL CLIENTE:** 💲'
+        f'## 💰 **VALOR TOTAL A PAGAR POR EL CLIENTE (CON IVA):** 💲'
         f' `{total_presupuesto:,.0f}`'
     )
     st.markdown('---')
     st.success(
-        '✨ Propuesta comercial formal generada con éxito, respaldada por el'
-        ' levantamiento técnico, validación de planos y especificaciones de'
-        ' obra.'
+        '✨ Propuesta comercial formal generada con éxito, integrando de forma'
+        ' impecable las cubicaciones técnicas, partidas y valores finales'
+        ' listos para presentar.'
     )
   else:
     st.warning(
