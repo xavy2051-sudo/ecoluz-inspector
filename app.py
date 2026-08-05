@@ -59,7 +59,7 @@ if modulo == '1. Levantamiento y Cubicaciones':
   )
 
   st.markdown('---')
-  st.subheader('🛠️ Asignación de Partidas y Materiales (Desde SQLite)')
+  st.subheader('🛠️ Asignación de Partidas y Materiales')
 
   col_p1, col_p2, col_p3 = st.columns([2, 1, 1])
   with col_p1:
