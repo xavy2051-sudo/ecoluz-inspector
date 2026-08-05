@@ -175,30 +175,36 @@ elif modulo == '2. Registro Fotográfico y Planos':
 
 # ----------------- MÓDULO 3 -----------------
 elif modulo == '3. Especificaciones Técnicas (ET)':
-  st.subheader(
-      '📄 Módulo 3: Especificaciones Técnicas Consolidadas por Recinto'
-  )
+  st.subheader('📄 ESPECIFICACIONES TÉCNICAS DE CONSTRUCCIÓN')
+  st.markdown('---')
+  st.markdown('### 🏛️ PROYECTO: ESPECIALIDADES ECOLUZ')
   st.markdown(
-      'A continuación se detallan las partidas, materiales y revestimientos'
-      ' ingresados en el levantamiento:'
+      '**Materialidad:** Estructura Metálica / Metalcom / Terminaciones de'
+      ' Primera'
   )
+  st.markdown('**Constructor:** Constructor Civil - ECOLUZ SpA')
+  st.markdown('---')
 
   if st.session_state['partidas_recintos']:
     for recinto, items in st.session_state['partidas_recintos'].items():
       if items:
-        with st.expander(
-            f'📁 Especificaciones Técnicas: {recinto}', expanded=True
-        ):
-          for idx, item in enumerate(items, 1):
-            st.markdown(
-                f'**{idx}. {item["Partida"]}**\n- Cantidad / Rendimiento:'
-                f' `{item["Cantidad"]}`\n- Precio Unitario Referencial: 💲'
-                f' `{item["Precio Unit."]:,.0f}`'
-            )
+        st.markdown(f'#### 📌 Recinto: {recinto}')
+        for idx, item in enumerate(items, 1):
+          st.markdown(f'**{idx}. {item["Partida"]}**')
+          st.markdown(
+              f'   - *Descripción Técnica:* Suministro e instalación de'
+              f' {item["Partida"]} ejecutado según normativa chilena vigente y'
+              ' altos estándares de calidad.'
+          )
+          st.markdown(
+              f'   - *Metrado / Cantidad:* `{item["Cantidad"]}` unidades o'
+              ' metros cuadrados asignados.'
+          )
+        st.markdown('')
   else:
     st.warning(
-        '⚠️ Aún no se han registrado partidas en el Módulo 1. Por favor'
-        ' ingresa los recintos y sus materiales.'
+        '⚠️ Aún no se han registrado partidas en el Módulo 1 para redactar las'
+        ' Especificaciones Técnicas.'
     )
 
 # ----------------- MÓDULO 4 -----------------
@@ -254,13 +260,57 @@ elif modulo == '4. Análisis de Precios Unitarios (APU)':
   else:
     st.info(
         'ℹ️ No hay partidas cargadas todavía. Completa el Módulo 1 para'
-        ' visualizar los APU y la valorización total.'
+        ' visualizar los APU.'
     )
 
 # ----------------- MÓDULO 5 -----------------
 elif modulo == '5. Cierre Económico y Presupuesto':
-  st.subheader('📊 Módulo 5: Cotización y Cierre Comercial')
-  st.success(
-      '¡Sistema listo para generar la propuesta formal para el cliente con'
-      ' base en todas las especificaciones técnicas y cubicaciones validadas!'
-  )
+  st.subheader('📊 Módulo 5: Cotización Comercial Formal para el Cliente')
+  st.markdown('---')
+  st.markdown('### 🏢 PROPUESTA ECONÓMICA - ESPECIALIDADES ECOLUZ')
+
+  col_cot1, col_cot2 = st.columns(2)
+  with col_cot1:
+    st.markdown('**Emitido por:** Constructor Civil / ECOLUZ SpA')
+    st.markdown('**Ciudad:** Concepción, Chile')
+  with col_cot2:
+    st.markdown('**Validez de la Oferta:** 15 Días')
+    st.markdown('**Forma de Pago:** 50% Anticipo - 50% Recepción Conforme')
+
+  st.markdown('---')
+
+  todos_los_datos = []
+  for recinto, items in st.session_state['partidas_recintos'].items():
+    for item in items:
+      todos_los_datos.append(item)
+
+  if todos_los_datos:
+    df_total = pd.DataFrame(todos_los_datos)
+    costo_directo = df_total['Costo Total'].sum()
+    costo_gg = costo_directo * 0.10
+    costo_util = costo_directo * 0.15
+    subtotal_neto = costo_directo + costo_gg + costo_util
+    iva = subtotal_neto * 0.19
+    total_presupuesto = subtotal_neto + iva
+
+    st.markdown('#### Resumen Económico General de la Propuesta')
+    st.markdown(f'- **Costo Directo de Obras:** 💲 `{costo_directo:,.0f}`')
+    st.markdown(f'- **Gastos Generales y Utilidad:** 💲 `{(costo_gg + costo_util):,.0f}`')
+    st.markdown(f'- **Neto Afecto:** 💲 `{subtotal_neto:,.0f}`')
+    st.markdown(f'- **IVA (19%):** 💲 `{iva:,.0f}`')
+    st.markdown('---')
+    st.markdown(
+        f'## 💰 **VALOR TOTAL A PAGAR POR EL CLIENTE:** 💲'
+        f' `{total_presupuesto:,.0f}`'
+    )
+    st.markdown('---')
+    st.success(
+        '✨ Propuesta comercial formal generada con éxito, respaldada por el'
+        ' levantamiento técnico, validación de planos y especificaciones de'
+        ' obra.'
+    )
+  else:
+    st.warning(
+        '⚠️ No hay información de partidas registradas. Complete primero el'
+        ' Módulo 1.'
+    )
