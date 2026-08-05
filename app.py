@@ -112,7 +112,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
           {"Partida": f"Conductor Eléctrico {c_cable} (rollo 100m)", "Cantidad": max(1.0, round(c_puntos / 4.0, 1)), "Precio Unit.": 38000.0},
           {"Partida": f"Canalización {c_tubo} (tira 3m)", "Cantidad": max(2.0, round(c_puntos * 1.5, 0)), "Precio Unit.": 3800.0},
           {"Partida": f"Cajas de Derivación / Conexión + Coplas y Curvas (gl)", "Cantidad": 1.0, "Precio Unit.": 18500.0},
-          {"Partida": f"Módulos Enchufes e Interruptores Dobles / Placas (unidad)", "Cantidad": c_puntos, "Precio Unit.": 4500.0},
+          {"Partida": f"Módulos Enchufes e Interruptores Dobles / Placas (unidad)", "Cantidad": float(c_puntos), "Precio Unit.": 4500.0},
           {"Partida": f"{c_tablero} (kit completo)", "Cantidad": 1.0, "Precio Unit.": 68000.0},
           {"Partida": "Accesorios de Fijación (Abrazaderas, Cintas, Terminales, Maragatos) (gl)", "Cantidad": 1.0, "Precio Unit.": 12500.0},
       ]
@@ -291,7 +291,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
       ]
 
   # ==========================================
-  # 🚿 OTRASI RECINTOS
+  # 🚿 OTROS RECINTOS
   # ==========================================
   else:
     st.write("Recinto general. Se cargará el kit estándar de Tabiquería y Terminación.")
@@ -360,6 +360,7 @@ elif modulo == "4. Análisis de Precios Unitarios (APU)":
     for item in items:
       f = item.copy()
       f["Especialidad / Recinto"] = rec
+      f["Costo Total"] = f["Cantidad"] * f["Precio Unit."]
       todos.append(f)
 
   if todos:
@@ -378,6 +379,7 @@ elif modulo == "5. Cierre Económico y Presupuesto":
     for item in items:
       f = item.copy()
       f["Especialidad / Recinto"] = rec
+      f["Costo Total"] = f["Cantidad"] * f["Precio Unit."]
       todos.append(f)
 
   if todos:
