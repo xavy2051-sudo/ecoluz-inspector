@@ -61,37 +61,58 @@ if modulo == '1. Levantamiento y Cubicaciones':
   st.markdown('---')
   st.subheader('🛠️ Asignación de Partidas y Materiales')
 
+  # Diccionario con referencias de mercado chileno y unidades estándar
+  base_partidas = {
+      'Radier de Hormigón H-20': {'precio': 18500.0, 'unidad': 'm²'},
+      'Estructura Metalcom C 90x0.85 (Tabiques)': {
+          'precio': 14200.0,
+          'unidad': 'm²',
+      },
+      'Placa Yeso Cartón Volcanita RH 12.5mm': {
+          'precio': 9800.0,
+          'unidad': 'm²',
+      },
+      'Cerámico Muro 30x60': {'precio': 22000.0, 'unidad': 'm²'},
+      'Porcelanato Piso 60x60': {'precio': 28500.0, 'unidad': 'm²'},
+      'Adhesivo Cerámico (25kg)': {'precio': 8900.0, 'unidad': 'saco'},
+      'Frague Flexible (1kg)': {'precio': 4500.0, 'unidad': 'kg'},
+      'Pintura Esmalte al Agua (Cielo)': {'precio': 6500.0, 'unidad': 'm²'},
+      'Tubería PVC Sanitaria 110mm / 50mm': {
+          'precio': 11000.0,
+          'unidad': 'm',
+      },
+      'Red Hidráulica PPR / Cobre': {'precio': 15000.0, 'unidad': 'm'},
+  }
+
   col_p1, col_p2, col_p3 = st.columns([2, 1, 1])
   with col_p1:
     partida_seleccionada = st.selectbox(
-        'Partida / Revestimiento / Insumo',
-        [
-            'Radier de Hormigón H-20',
-            'Estructura Metalcom C 90x0.85 (Tabiques)',
-            'Placa Yeso Cartón Volcanita RH 12.5mm',
-            'Cerámico Muro 30x60',
-            'Porcelanato Piso 60x60',
-            'Adhesivo Cerámico (25kg)',
-            'Frague Flexible (1kg)',
-            'Pintura Esmalte al Agua (Cielo)',
-            'Tubería PVC Sanitaria 110mm / 50mm',
-            'Red Hidráulica PPR / Cobre',
-        ],
+        'Partida / Revestimiento / Insumo', list(base_partidas.keys())
     )
+    datos_sugeridos = base_partidas[partida_seleccionada]
+    precio_sugerido = datos_sugeridos['precio']
+    unidad_medida = datos_sugeridos['unidad']
+
   with col_p2:
     cantidad_ingresada = st.number_input(
-        'Cantidad / Rendimiento', min_value=0.01, value=1.0, step=0.1
+        f'Cantidad ({unidad_medida}) / Rendimiento',
+        min_value=0.01,
+        value=float(round(area_piso, 2)),
+        step=0.1,
     )
   with col_p3:
     precio_ingresado = st.number_input(
-        'Precio Unitario ($)', min_value=0.0, value=12500.0, step=500.0
+        'Precio Unitario ($)',
+        min_value=0.0,
+        value=float(precio_sugerido),
+        step=500.0,
     )
 
   if st.button('➕ Agregar Partida al Resumen del Recinto'):
     if recinto_actual not in st.session_state['partidas_recintos']:
       st.session_state['partidas_recintos'][recinto_actual] = []
     st.session_state['partidas_recintos'][recinto_actual].append({
-        'Partida': partida_seleccionada,
+        'Partida': f'{partida_seleccionada} ({unidad_medida})',
         'Cantidad': cantidad_ingresada,
         'Precio Unit.': precio_ingresado,
         'Costo Total': cantidad_ingresada * precio_ingresado,
@@ -198,7 +219,7 @@ elif modulo == '3. Especificaciones Técnicas (ET)':
           )
           st.markdown(
               f'   - *Metrado / Cantidad:* `{item["Cantidad"]}` unidades o'
-              ' metros cuadrados asignados.'
+              ' metros asignados.'
           )
         st.markdown('')
   else:
@@ -298,7 +319,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
     df_cliente.columns = [
         'Recinto',
         'Partida / Revestimiento',
-        'Cantidad / m²',
+        'Cantidad / Unidad',
         'Total Parcial',
     ]
     st.dataframe(df_cliente, use_container_width=True)
@@ -326,7 +347,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
     )
     st.markdown('---')
 
-    # SECCIÓN AMIGABLE: MENSAJE PARA WHATSAPP
+    # MENSAJE PARA WHATSAPP
     st.markdown('### 💬 Mensaje Rápido para Enviar por WhatsApp / Chat')
     mensaje_wsp = (
         '🏡 *PROPUESTA ECONÓMICA - ECOLUZ SpA*\n\nEstimado(a) cliente,'
@@ -335,7 +356,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
     for index, row in df_cliente.iterrows():
       mensaje_wsp += (
           f'▪️ *{row["Recinto"]}* - {row["Partida / Revestimiento"]} '
-          f'(Cant: {row["Cantidad / m²"]}): ${row["Total Parcial"]:,.0f}\n'
+          f'(Cant: {row["Cantidad / Unidad"]}): ${row["Total Parcial"]:,.0f}\n'
       )
     mensaje_wsp += f'\n🚀 *VALOR TOTAL (CON IVA):* `${total_presupuesto:,.0f}`\n\nForma de Pago: 50% Anticipo - 50% Recepción Conforme.\nQuedamos atentos a sus comentarios. ¡Saludos cordiales!'
 
@@ -347,7 +368,6 @@ elif modulo == '5. Cierre Económico y Presupuesto':
 
     st.markdown('---')
 
-    # DOCUMENTO HTML/PDF MODERNO Y CORPORATIVO
     html_content = f"""
         <html>
         <head>
@@ -402,7 +422,6 @@ elif modulo == '5. Cierre Económico y Presupuesto':
           ' documento para imprimir/guardar en PDF.'
       )
   else:
-      
     st.warning(
         '⚠️ No hay información de partidas registradas. Complete primero el'
         ' Módulo 1.'
