@@ -5,10 +5,10 @@ st.set_page_config(
     page_title='ECOLUZ - Cerebro Inspector Técnico', layout='wide'
 )
 
-st.title('🏗️ ECOLUZ - Cerebro Inspector Técnico')
+st.title('🏗️ ECOLUZ - Cerebro Inspector Técnico & Listado de Ejecución')
 st.markdown(
-    'Levantamiento, Cubicaciones, Registro Fotográfico y Cotizador Comercial'
-    ' Exprés'
+    'Levantamiento, Cubicaciones con Desglose Completo de Materiales, Insumos y'
+    ' Consumibles'
 )
 
 # ----------------- MENÚ LATERAL (MÓDULO DE TRABAJO) -----------------
@@ -16,7 +16,7 @@ st.sidebar.title('📋 Módulo de Trabajo')
 modulo = st.sidebar.radio(
     'Seleccione Fase:',
     [
-        '1. Levantamiento y Cubicaciones',
+        '1. Levantamiento y Cubicaciones (Desglose Completo)',
         '2. Registro Fotográfico y Planos',
         '3. Especificaciones Técnicas (ET)',
         '4. Análisis de Precios Unitarios (APU)',
@@ -28,8 +28,10 @@ if 'partidas_recintos' not in st.session_state:
   st.session_state['partidas_recintos'] = {}
 
 # ----------------- MÓDULO 1 -----------------
-if modulo == '1. Levantamiento y Cubicaciones':
-  st.subheader('📐 Módulo 1: Geometría y Asignación de Partidas')
+if modulo == '1. Levantamiento y Cubicaciones (Desglose Completo)':
+  st.subheader(
+      '📐 Módulo 1: Geometría y Desglose de Materiales para Ejecución en Obra'
+  )
   recinto_actual = st.selectbox(
       'Seleccionar Recinto',
       [
@@ -59,111 +61,347 @@ if modulo == '1. Levantamiento y Cubicaciones':
   )
 
   st.markdown('---')
-  st.subheader('🛠️ Asignación de Partidas y Materiales')
+  st.subheader(
+      '🛠️ Selección de Partida Principal (Genera Kit Completo de Materiales y'
+      ' Consumibles)'
+  )
 
-  # Diccionario con referencias, unidades y el tipo de cálculo lógico correspondiente
-  base_partidas = {
-      'Radier de Hormigón H-20': {
-          'precio': 18500.0,
-          'unidad': 'm²',
-          'tipo': 'piso',
-      },
-      'Estructura Metalcom C 90x0.85 (Tabiques)': {
-          'precio': 14200.0,
-          'unidad': 'm²',
-          'tipo': 'muro',
-      },
-      'Placa Yeso Cartón Volcanita RH 12.5mm': {
-          'precio': 9800.0,
-          'unidad': 'm²',
-          'tipo': 'muro',
-      },
-      'Cerámico Muro 30x60': {
-          'precio': 22000.0,
-          'unidad': 'm²',
-          'tipo': 'muro',
-      },
-      'Porcelanato Piso 60x60': {
-          'precio': 28500.0,
-          'unidad': 'm²',
-          'tipo': 'piso',
-      },
-      'Adhesivo Cerámico (25kg)': {
-          'precio': 8900.0,
-          'unidad': 'saco',
-          'tipo': 'insumo',
-      },
-      'Frague Flexible (1kg)': {
-          'precio': 4500.0,
-          'unidad': 'kg',
-          'tipo': 'insumo',
-      },
-      'Pintura Esmalte al Agua (Cielo)': {
-          'precio': 6500.0,
-          'unidad': 'm²',
-          'tipo': 'cielo',
-      },
-      'Tubería PVC Sanitaria 110mm / 50mm': {
-          'precio': 11000.0,
-          'unidad': 'm',
-          'tipo': 'lineal',
-      },
-      'Red Hidráulica PPR / Cobre': {
-          'precio': 15000.0,
-          'unidad': 'm',
-          'tipo': 'lineal',
-      },
-  }
+  # Sistemas constructivos con despliegue técnico profesional chileno
+  sistemas_constructivos = [
+      'Tabiquería Metalcom Completa (Perfiles + Placas RH + Fijaciones + Juntas)',
+      'Revestimiento Cerámico Muro Completo (Cerámica + Adhesivo + Fragüe + Accesorios + Silicona)',
+      'Revestimiento Piso Porcelanato Completo (Porcelanato + Adhesivo + Fragüe + Niveladores)',
+      'Piso Flotante Completo (Piso + Manta + Guardapolvos + Junquillos)',
+      'Radier de Hormigón H-20 Reforzado',
+      'Pintura Esmalte al Agua Completa (Pintura + Empaste + Imprimante + Lijas + Protección)',
+      'Instalación Sanitaria / Gasfitería Completa (Tuberías PVC/PPR + Codos + Tees + Llaves + Adhesivos)',
+      'Instalación Eléctrica Básica (Conduit + Cables + Cajas + Enchufes/Interruptores + Protecciones)',
+      'Impermeabilización de Baño / Zona Húmeda (Membrana + Primer + Banda perimetral)',
+      'Kit de Consumibles y Aseo de Obra (Discos, Brocas, Sacos escombros, Espuma, Silicona)',
+  ]
 
-  col_p1, col_p2, col_p3 = st.columns([2, 1, 1])
-  with col_p1:
-    partida_seleccionada = st.selectbox(
-        'Partida / Revestimiento / Insumo', list(base_partidas.keys())
-    )
-    datos_sugeridos = base_partidas[partida_seleccionada]
-    precio_sugerido = datos_sugeridos['precio']
-    unidad_medida = datos_sugeridos['unidad']
-    tipo_partida = datos_sugeridos['tipo']
+  partida_maestra = st.selectbox(
+      'Seleccione Sistema Constructivo / Partida', sistemas_constructivos
+  )
 
-  # Lógica inteligente y automatizada de rendimientos según la naturaleza de la partida
-  if tipo_partida in ['piso', 'cielo']:
-    cantidad_sugerida = area_piso
-  elif tipo_partida == 'muro':
-    cantidad_sugerida = area_muros
-  elif tipo_partida == 'lineal':
-    cantidad_sugerida = perimetro
-  elif tipo_partida == 'insumo':
-    cantidad_sugerida = area_piso * 0.25  # Proporción estimada inicial
-  else:
-    cantidad_sugerida = 1.0
-
-  with col_p2:
-    cantidad_ingresada = st.number_input(
-        f'Cantidad ({unidad_medida}) / Rendimiento',
-        min_value=0.01,
-        value=float(round(cantidad_sugerida, 2)),
-        step=0.1,
-    )
-  with col_p3:
-    precio_ingresado = st.number_input(
-        'Precio Unitario ($)',
-        min_value=0.0,
-        value=float(precio_sugerido),
-        step=500.0,
-    )
-
-  if st.button('➕ Agregar Partida al Resumen del Recinto'):
+  if st.button(
+      '➕ Generar y Agregar Kit Completo de Materiales al Recinto'
+  ):
     if recinto_actual not in st.session_state['partidas_recintos']:
       st.session_state['partidas_recintos'][recinto_actual] = []
-    st.session_state['partidas_recintos'][recinto_actual].append({
-        'Partida': f'{partida_seleccionada} ({unidad_medida})',
-        'Cantidad': cantidad_ingresada,
-        'Precio Unit.': precio_ingresado,
-        'Costo Total': cantidad_ingresada * precio_ingresado,
-    })
-    st.success(f'Partida agregada exitosamente a **{recinto_actual}**.')
 
-  st.markdown(f'### 📋 Desglose Técnico y Económico: {recinto_actual}')
+    nuevos_items = []
+
+    if 'Tabiquería Metalcom Completa' in partida_maestra:
+      cant_muros = area_muros
+      nuevos_items = [
+          {
+              'Partida': (
+                  'Estructura Perfil C 90x0.85 y Soleras (Metalcom) (m²)'
+              ),
+              'Cantidad': round(cant_muros, 2),
+              'Precio Unit.': 14200.0,
+          },
+          {
+              'Partida': 'Placa Yeso Cartón Volcanita RH 12.5mm (m²)',
+              'Cantidad': round(cant_muros, 2),
+              'Precio Unit.': 9800.0,
+          },
+          {
+              'Partida': 'Tornillos Punta Broca / Fina (Caja 100un) (unidad)',
+              'Cantidad': max(1.0, round(cant_muros / 15.0, 1)),
+              'Precio Unit.': 6500.0,
+          },
+          {
+              'Partida': 'Tarugos con Tornillo y Anclajes / Clavos (gl)',
+              'Cantidad': max(1.0, round(perimetro / 5.0, 1)),
+              'Precio Unit.': 4500.0,
+          },
+          {
+              'Partida': (
+                  'Cinta de Juntas (50m) + Masilla Volcanita (Saco 25kg) (gl)'
+              ),
+              'Cantidad': max(1.0, round(cant_muros / 20.0, 1)),
+              'Precio Unit.': 12500.0,
+          },
+          {
+              'Partida': 'Cinta Acústica perimetral (rollo 30m) (gl)',
+              'Cantidad': max(1.0, round(perimetro / 15.0, 1)),
+              'Precio Unit.': 8900.0,
+          },
+          {
+              'Partida': 'Esquineros Metálicos Galvanizados (barra 3m) (gl)',
+              'Cantidad': max(1.0, round(perimetro / 4.0, 1)),
+              'Precio Unit.': 3200.0,
+          },
+      ]
+
+    elif 'Cerámico Muro Completo' in partida_maestra:
+      cant_muros = area_muros
+      nuevos_items = [
+          {
+              'Partida': 'Cerámico Muro Formato 30x60 cm (m²)',
+              'Cantidad': round(cant_muros * 1.05, 2),
+              'Precio Unit.': 22000.0,
+          },
+          {
+              'Partida': 'Adhesivo Cerámico Saco 25kg (saco)',
+              'Cantidad': max(1.0, round(cant_muros / 4.0, 1)),
+              'Precio Unit.': 8900.0,
+          },
+          {
+              'Partida': 'Frague Flexible Antihongo kg (kg)',
+              'Cantidad': max(1.0, round(cant_muros * 0.3, 1)),
+              'Precio Unit.': 4500.0,
+          },
+          {
+              'Partida': (
+                  'Crucetas (bolsa 100un) + Sistema Niveladores y Cuñas (gl)'
+              ),
+              'Cantidad': max(1.0, round(cant_muros / 10.0, 1)),
+              'Precio Unit.': 7500.0,
+          },
+          {
+              'Partida': 'Perfiles de Terminación / Esquinero PVC (barra) (gl)',
+              'Cantidad': max(1.0, round(perimetro / 6.0, 1)),
+              'Precio Unit.': 4200.0,
+          },
+          {
+              'Partida': 'Silicona Sanitaria Antihongo (cartucho 300ml) (gl)',
+              'Cantidad': max(1.0, round(perimetro / 10.0, 1)),
+              'Precio Unit.': 5800.0,
+          },
+      ]
+
+    elif 'Revestimiento Piso Porcelanato Completo' in partida_maestra:
+      cant_piso = area_piso
+      nuevos_items = [
+          {
+              'Partida': 'Porcelanato Piso 60x60 cm (m²)',
+              'Cantidad': round(cant_piso * 1.07, 2),
+              'Precio Unit.': 28500.0,
+          },
+          {
+              'Partida': 'Adhesivo Especial Porcelanato Saco 25kg (saco)',
+              'Cantidad': max(1.0, round(cant_piso / 3.5, 1)),
+              'Precio Unit.': 11500.0,
+          },
+          {
+              'Partida': 'Frague para Porcelanato (kg)',
+              'Cantidad': max(1.0, round(cant_piso * 0.35, 1)),
+              'Precio Unit.': 5200.0,
+          },
+          {
+              'Partida': 'Niveladores y Cuñas para Porcelanato (kit) (gl)',
+              'Cantidad': max(1.0, round(cant_piso / 8.0, 1)),
+              'Precio Unit.': 9500.0,
+          },
+      ]
+
+    elif 'Piso Flotante Completo' in partida_maestra:
+      cant_piso = area_piso
+      nuevos_items = [
+          {
+              'Partida': 'Piso Flotante 8mm Alto Tráfico (m²)',
+              'Cantidad': round(cant_piso * 1.05, 2),
+              'Precio Unit.': 16500.0,
+          },
+          {
+              'Partida': 'Manta Polietileno / Acústica bajo piso (m²)',
+              'Cantidad': round(cant_piso, 2),
+              'Precio Unit.': 1800.0,
+          },
+          {
+              'Partida': 'Guardapolvos MDF 7cm + Junquillos (ml)',
+              'Cantidad': round(perimetro, 2),
+              'Precio Unit.': 3500.0,
+          },
+          {
+              'Partida': 'Adhesivo montaje, tarugos y tornillos de fijación (gl)',
+              'Cantidad': 1.0,
+              'Precio Unit.': 6800.0,
+          },
+      ]
+
+    elif 'Radier de Hormigón H-20' in partida_maestra:
+      cant_piso = area_piso
+      nuevos_items = [
+          {
+              'Partida': 'Hormigón H-20 premezclado o cubicación equivalente (m²)',
+              'Cantidad': round(cant_piso, 2),
+              'Precio Unit.': 18500.0,
+          },
+          {
+              'Partida': 'Polietileno de alta densidad (cancha) (m²)',
+              'Cantidad': round(cant_piso * 1.1, 2),
+              'Precio Unit.': 1200.0,
+          },
+          {
+              'Partida': 'Malla Acma C-139 para refuerzo radier (m²)',
+              'Cantidad': round(cant_piso, 2),
+              'Precio Unit.': 6400.0,
+          },
+      ]
+
+    elif 'Pintura Esmalte al Agua Completa' in partida_maestra:
+      cant_sup = area_muros + area_piso
+      nuevos_items = [
+          {
+              'Partida': (
+                  'Pintura Esmalte al Agua / Látex Terminación (tineta 4g) (gl)'
+              ),
+              'Cantidad': max(1.0, round(cant_sup / 35.0, 1)),
+              'Precio Unit.': 38000.0,
+          },
+          {
+              'Partida': (
+                  'Imprimante / Sellador de muros y Cielos (tineta 4g) (gl)'
+              ),
+              'Cantidad': max(1.0, round(cant_sup / 45.0, 1)),
+              'Precio Unit.': 26000.0,
+          },
+          {
+              'Partida': 'Empaste en saco o tarro para afinado (saco/gl)',
+              'Cantidad': max(1.0, round(cant_sup / 20.0, 1)),
+              'Precio Unit.': 12000.0,
+          },
+          {
+              'Partida': (
+                  'Lijas, Cinta de enmascarar, Plástico y Cartón protección'
+                  ' (gl)'
+              ),
+              'Cantidad': 1.0,
+              'Precio Unit.': 15000.0,
+          },
+          {
+              'Partida': 'Rodillos, Brochas y Extensor telescópico (gl)',
+              'Cantidad': 1.0,
+              'Precio Unit.': 14000.0,
+          },
+      ]
+
+    elif 'Instalación Sanitaria / Gasfitería Completa' in partida_maestra:
+      cant_lin = perimetro
+      nuevos_items = [
+          {
+              'Partida': (
+                  'Tubería PVC Sanitaria 110mm / 50mm y PPR Hidráulica (m)'
+              ),
+              'Cantidad': round(cant_lin * 1.5, 2),
+              'Precio Unit.': 12500.0,
+          },
+          {
+              'Partida': (
+                  'Codos, Tees, Coplas, Uniones y Reducciones PVC/PPR (gl)'
+              ),
+              'Cantidad': max(1.0, round(cant_lin / 3.0, 1)),
+              'Precio Unit.': 16000.0,
+          },
+          {
+              'Partida': (
+                  'Llaves de paso, Adaptadores, Collares y Terminales (gl)'
+              ),
+              'Cantidad': 2.0,
+              'Precio Unit.': 14500.0,
+          },
+          {
+              'Partida': (
+                  'Pegamento PVC, Limpiador, Cinta Teflón y Abrazaderas/Soportes'
+                  ' (gl)'
+              ),
+              'Cantidad': 1.0,
+              'Precio Unit.': 12800.0,
+          },
+      ]
+
+    elif 'Instalación Eléctrica Básica' in partida_maestra:
+      nuevos_items = [
+          {
+              'Partida': 'Tubos Conduit, Curvas, Coplas y Cajas de derivación (gl)',
+              'Cantidad': 1.0,
+              'Precio Unit.': 22000.0,
+          },
+          {
+              'Partida': (
+                  'Conductores eléctricos THHN/NYA (rollos/tramos) (gl)'
+              ),
+              'Cantidad': 1.0,
+              'Precio Unit.': 35000.0,
+          },
+          {
+              'Partida': (
+                  'Enchufes, Interruptores, Placas y Canaletas PVC (gl)'
+              ),
+              'Cantidad': 4.0,
+              'Precio Unit.': 6500.0,
+          },
+          {
+              'Partida': 'Automáticos, Diferencial y Tablero secundario (gl)',
+              'Cantidad': 1.0,
+              'Precio Unit.': 48000.0,
+          },
+      ]
+
+    elif 'Impermeabilización de Baño / Zona Húmeda' in partida_maestra:
+      cant_h = area_piso + (area_muros * 0.4)
+      nuevos_items = [
+          {
+              'Partida': 'Membrana Impermeabilizante Líquida / Poliuretano (m²)',
+              'Cantidad': round(cant_h, 2),
+              'Precio Unit.': 11000.0,
+          },
+          {
+              'Partida': 'Primer / Imprimante para membrana (gl)',
+              'Cantidad': 1.0,
+              'Precio Unit.': 14500.0,
+          },
+          {
+              'Partida': 'Banda de unión perimetral y sellos para desagües (gl)',
+              'Cantidad': 1.0,
+              'Precio Unit.': 16000.0,
+          },
+      ]
+
+    elif 'Kit de Consumibles y Aseo de Obra' in partida_maestra:
+      nuevos_items = [
+          {
+              'Partida': (
+                  'Discos de corte, desbaste, brocas y tornillos varios (gl)'
+              ),
+              'Cantidad': 1.0,
+              'Precio Unit.': 18000.0,
+          },
+          {
+              'Partida': (
+                  'Espuma expansiva, sellador poliuretano y cinta americana'
+                  ' (gl)'
+              ),
+              'Cantidad': 1.0,
+              'Precio Unit.': 14000.0,
+          },
+          {
+              'Partida': (
+                  'Bolsas de basura residas y sacos para escombros (pack)'
+              ),
+              'Cantidad': 2.0,
+              'Precio Unit.': 6500.0,
+          },
+      ]
+
+    for item in nuevos_items:
+      st.session_state['partidas_recintos'][recinto_actual].append({
+          'Partida': item['Partida'],
+          'Cantidad': item['Cantidad'],
+          'Precio Unit.': item['Precio Unit.'],
+          'Costo Total': item['Cantidad'] * item['Precio Unit.'],
+      })
+
+    st.success(
+        f'✅ Kit completo de materiales agregado exitosamente a'
+        f' **{recinto_actual}**.'
+    )
+
+  st.markdown(f'### 📋 Desglose Técnico y Económico Detallado: {recinto_actual}')
   if (
       recinto_actual in st.session_state['partidas_recintos']
       and st.session_state['partidas_recintos'][recinto_actual]
@@ -178,7 +416,7 @@ if modulo == '1. Levantamiento y Cubicaciones':
   else:
     st.info(
         f'Aún no hay partidas asignadas para {recinto_actual}. Selecciona y'
-        ' agrega los materiales arriba.'
+        ' genera los materiales arriba.'
     )
 
 # ----------------- MÓDULO 2 -----------------
@@ -240,7 +478,9 @@ elif modulo == '2. Registro Fotográfico y Planos':
 
 # ----------------- MÓDULO 3 -----------------
 elif modulo == '3. Especificaciones Técnicas (ET)':
-  st.subheader('📄 ESPECIFICACIONES TÉCNICAS DE CONSTRUCCIÓN')
+  st.subheader(
+      '📄 ESPECIFICACIONES TÉCNICAS Y LISTADO DE EJECUCIÓN PARA MAESTROS'
+  )
   st.markdown('---')
   st.markdown('### 🏛️ PROYECTO: ESPECIALIDADES ECOLUZ')
   st.markdown(
@@ -257,13 +497,13 @@ elif modulo == '3. Especificaciones Técnicas (ET)':
         for idx, item in enumerate(items, 1):
           st.markdown(f'**{idx}. {item["Partida"]}**')
           st.markdown(
-              f'   - *Descripción Técnica:* Suministro e instalación de'
-              f' {item["Partida"]} ejecutado según normativa chilena vigente y'
-              ' altos estándares de calidad.'
+              f'   - *Especificación Técnica:* Suministro, accesorios e'
+              f' instalación rigurosa de {item["Partida"]} según normativa'
+              ' chilena vigente y estándares constructivos de ECOLUZ SpA.'
           )
           st.markdown(
-              f'   - *Metrado / Cantidad:* `{item["Cantidad"]}` unidades o'
-              ' metros asignados.'
+              f'   - *Cantidad Requerida en Obra:* `{item["Cantidad"]}`'
+              ' unidades / metros / sacos asignados.'
           )
         st.markdown('')
   else:
@@ -274,7 +514,9 @@ elif modulo == '3. Especificaciones Técnicas (ET)':
 
 # ----------------- MÓDULO 4 -----------------
 elif modulo == '4. Análisis de Precios Unitarios (APU)':
-  st.subheader('💰 Módulo 4: Análisis de Precios Unitarios y Consolidado')
+  st.subheader(
+      '💰 Módulo 4: Análisis de Precios Unitarios y Consolidado de Materiales'
+  )
 
   todos_los_datos = []
   for recinto, items in st.session_state['partidas_recintos'].items():
@@ -330,7 +572,9 @@ elif modulo == '4. Análisis de Precios Unitarios (APU)':
 
 # ----------------- MÓDULO 5 -----------------
 elif modulo == '5. Cierre Económico y Presupuesto':
-  st.subheader('📊 Módulo 5: Cotización Comercial Amigable para el Cliente')
+  st.subheader(
+      '📊 Módulo 5: Cotización Comercial y Listado de Compras para Obra'
+  )
   st.markdown('---')
   st.markdown('### 🏢 PROPUESTA ECONÓMICA - ESPECIALIDADES ECOLUZ')
 
@@ -355,14 +599,14 @@ elif modulo == '5. Cierre Económico y Presupuesto':
     df_cot = pd.DataFrame(todos_los_datos)
 
     st.markdown(
-        '#### 📋 Detalle de Partidas, Cubicaciones y Valores por Recinto'
+        '#### 📋 Detalle de Materiales, Insumos y Cubicaciones por Recinto'
     )
     df_cliente = df_cot[
         ['Recinto', 'Partida', 'Cantidad', 'Costo Total']
     ].copy()
     df_cliente.columns = [
         'Recinto',
-        'Partida / Revestimiento',
+        'Material / Partida / Accesorio',
         'Cantidad / Unidad',
         'Total Parcial',
     ]
@@ -377,7 +621,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
 
     st.markdown('---')
     st.markdown('#### 📊 Resumen Financiero de la Propuesta')
-    st.markdown(f'- **Costo Directo de Obras:** 💲 `{costo_directo:,.0f}`')
+    st.markdown(f'- **Costo Directo de Materiales y Obras:** 💲 `{costo_directo:,.0f}`')
     st.markdown(
         f'- **Gastos Generales y Utilidad (25%):** 💲'
         f' `{(costo_gg + costo_util):,.0f}`'
@@ -394,12 +638,13 @@ elif modulo == '5. Cierre Económico y Presupuesto':
     # MENSAJE PARA WHATSAPP
     st.markdown('### 💬 Mensaje Rápido para Enviar por WhatsApp / Chat')
     mensaje_wsp = (
-        '🏡 *PROPUESTA ECONÓMICA - ECOLUZ SpA*\n\nEstimado(a) cliente,'
-        ' adjunto el resumen de la propuesta para su proyecto:\n\n'
+        '🏡 *PROPUESTA Y LISTADO TÉCNICO - ECOLUZ SpA*\n\nEstimado(a) cliente,'
+        ' adjunto el detalle completo de materiales e insumos para su'
+        ' proyecto:\n\n'
     )
     for index, row in df_cliente.iterrows():
       mensaje_wsp += (
-          f'▪️ *{row["Recinto"]}* - {row["Partida / Revestimiento"]} '
+          f'▪️ *{row["Recinto"]}* - {row["Material / Partida / Accesorio"]} '
           f'(Cant: {row["Cantidad / Unidad"]}): ${row["Total Parcial"]:,.0f}\n'
       )
     mensaje_wsp += f'\n🚀 *VALOR TOTAL (CON IVA):* `${total_presupuesto:,.0f}`\n\nForma de Pago: 50% Anticipo - 50% Recepción Conforme.\nQuedamos atentos a sus comentarios. ¡Saludos cordiales!'
@@ -415,7 +660,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
     html_content = f"""
         <html>
         <head>
-            <title>Propuesta Comercial - ECOLUZ SpA</title>
+            <title>Propuesta y Listado de Materiales - ECOLUZ SpA</title>
             <style>
                 body {{ font-family: 'Helvetica Neue', Arial, sans-serif; margin: 40px; color: #333; background-color: #f9f9f9; }}
                 .invoice-box {{ background: #fff; padding: 30px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }}
@@ -436,7 +681,7 @@ elif modulo == '5. Cierre Económico y Presupuesto':
                 <div class="subtitle">Constructor Civil | Concepción, Chile</div>
                 <hr style="border:0; border-top: 1px solid #ddd;">
                 
-                <h3>Detalle de Partidas y Cubicaciones</h3>
+                <h3>Detalle Completo de Materiales, Insumos y Cubicaciones</h3>
                 {df_cliente.to_html(index=False, classes='table')}
                 
                 <table class="summary">
@@ -462,8 +707,8 @@ elif modulo == '5. Cierre Económico y Presupuesto':
       )
     with col_btn2:
       st.success(
-          '✨ ¡Todo listo! Copia el texto para WhatsApp o descarga el'
-          ' documento para imprimir/guardar en PDF.'
+          '✨ ¡Todo listo! Listado completo de materiales y accesorios listo'
+          ' para la ejecución en obra.'
       )
   else:
     st.warning(
