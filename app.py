@@ -12,14 +12,13 @@ st.markdown(
     " Especificaciones Técnicas (E.T.) y Presupuesto Comercial"
 )
 
+
 # ----------------- FUNCIONES AUXILIARES DE EXPORTACIÓN -----------------
 def generar_excel_presupuesto(df_items, c_directo, gg_util, subtotal, iva, total):
   output = io.BytesIO()
   with pd.ExcelWriter(output, engine="openpyxl") as writer:
-    # Hoja 1: Desglose de Partidas
     df_items.to_excel(writer, index=False, sheet_name="Detalle_Partidas")
 
-    # Hoja 2: Resumen Financiero
     df_resumen = pd.DataFrame({
         "Concepto": [
             "Costo Directo Total",
@@ -55,16 +54,15 @@ if "detalles_tecnicos" not in st.session_state:
   st.session_state["detalles_tecnicos"] = {}
 
 lista_recintos_especialidades = [
+    "🧱 Módulo Completo Metalcom (OSB + Metalsiding + Internit + Cerámicos +"
+    " Pintura)",
     "⚡ Electricidad",
-    "🎨 Pintura",
+    "🎨 Pintura y Cielos",
     "🪵 Carpintería",
-    "🧱 Revestimientos",
-    "📐 Terminaciones",
+    "🧱 Revestimientos Cerámicos y Adhesivos",
+    "📐 Terminaciones Finas",
     "🌿 Paisajismo",
     "🔋 Generadores y Equipos",
-    "🚿 Baño Principal / Zonas Húmedas",
-    "🍳 Cocina / Logia",
-    "🛋️ Estar-Comedor / General",
 ]
 
 # ----------------- MÓDULO 1 -----------------
@@ -81,10 +79,10 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
   col1, col2 = st.columns(2)
   with col1:
     largo = st.number_input(
-        "Largo / Frente (m)", value=4.00, step=0.10, key="l_m1"
+        "Largo / Frente (m)", value=3.70, step=0.10, key="l_m1"
     )
     ancho = st.number_input(
-        "Ancho / Profundidad (m)", value=3.00, step=0.10, key="a_m1"
+        "Ancho / Profundidad (m)", value=3.70, step=0.10, key="a_m1"
     )
   with col2:
     alto = st.number_input(
@@ -96,7 +94,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
   area_muros = perimetro * alto
 
   st.info(
-      f"📏 **Métricas Base:** Área Superficie: `{area_piso:.2f} m²` | Perímetro"
+      f"📏 **Métricas Base:** Área Piso/Cielo: `{area_piso:.2f} m²` | Perímetro"
       f" Línea Base: `{perimetro:.2f} m` | Área Muros Bruta: `{area_muros:.2f} m²`"
   )
 
@@ -107,9 +105,181 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
   datos_et = {}
 
   # ==========================================
+  # 🧱 0. MÓDULO COMPLETO METALCOM MULTICAPA
+  # ==========================================
+  if "Módulo Completo Metalcom" in recinto_actual:
+    with st.expander(
+        "🏗️ Parámetros de la Solución Constructiva Multicapa", expanded=True
+    ):
+      espesor_osb = st.selectbox(
+          "Placa Estructural Exterior:",
+          ["OSB 11.1 mm", "OSB 9.5 mm", "Terciado Estructural 12 mm"],
+      )
+      tipo_insul = st.selectbox(
+          "Aislación Térmica / Acústica Interior:",
+          [
+              "Lana de Vidrio 50mm R100",
+              "Lana de Vidrio 80mm R188",
+              "Lana de Roca 50mm Alta Densidad",
+          ],
+      )
+      tipo_internit = st.selectbox(
+          "Revestimiento Interior Muros:",
+          [
+              "Plancha Internit (Fibrocemento) 6 mm",
+              "Plancha Internit (Fibrocemento) 8 mm",
+              "Volcanita RH (Resistente Humedad) 12.5 mm",
+          ],
+      )
+      tipo_pegamento = st.selectbox(
+          "Adhesivo para Cerámicos:",
+          [
+              "Bekron Flex (Porcelanato/Sustrito Flexible)",
+              "Bekron ACI (Sustrato Rígido/Exterior)",
+              "Bekron AC (Estd.)",
+          ],
+      )
+      tipo_pintura_cielo = st.selectbox(
+          "Pintura para Cielo:",
+          [
+              "Esmalte al Agua Antihongo Mate",
+              "Látex Antihongo Extra Cubriente",
+              "Óleo Opaco",
+          ],
+      )
+
+    datos_et = {
+        "Estructura": "Perfiles Metalcom C90x0.85 y U90x0.85",
+        "Exterior": f"{espesor_osb} + Barrera Humedad + Metalsiding",
+        "Aislación": tipo_insul,
+        "Interior Muros": f"{tipo_internit} + Cerámico",
+        "Piso": "Cerámico Antideslizante + Adhesivo",
+        "Cielo": f"Yeso-Cartón/Internit + Pintura {tipo_pintura_cielo}",
+        "Normativa": "OGUC Art 5.5.1 / NCh 353 / NCh 1071 / Manual Metalcom CINTAC",
+    }
+
+    if st.button("➕ Generar Cuadrilla y Materiales Módulo Completo"):
+      # Cubicaciones exactas con mermas operativas
+      planchas_osb = round((area_muros / 2.976) * 1.10, 1)  # 1.22 x 2.44 m
+      planchas_internit = round(
+          (area_muros / 2.88) * 1.10, 1
+      )  # 1.20 x 2.40 m
+      planchas_cielo = round((area_piso / 2.88) * 1.10, 1)
+
+      m2_metalsiding = round(area_muros * 1.08, 2)
+      m2_aislacion = round((area_muros + area_piso) * 1.05, 2)
+
+      m2_ceramico_muro = round(area_muros * 1.10, 2)
+      m2_ceramico_piso = round(area_piso * 1.10, 2)
+
+      sacos_pegamento = round(
+          (area_muros + area_piso) / 3.5, 1
+      )  # Rendimiento ~3.5 m² por saco 25kg
+      kg_frague = round((area_muros + area_piso) * 0.40, 1)
+
+      tinetas_pintura_cielo = max(1.0, round(area_piso / 35.0, 1))
+
+      nuevos_items = [
+          {
+              "Partida": (
+                  "Estructura Metalcom C90x0.85 y U90x0.85 (Muros y Soleras)"
+                  " (m²)"
+              ),
+              "Cantidad": round(area_muros, 2),
+              "Precio Unit.": 14500.0,
+          },
+          {
+              "Partida": (
+                  "Tornillos Autoperforantes T1 Lenteja y T2 Broca (caja 500"
+                  " un)"
+              ),
+              "Cantidad": 2.0,
+              "Precio Unit.": 9800.0,
+          },
+          {
+              "Partida": f"Placa Estructural {espesor_osb} 1.22x2.44m (planchas)",
+              "Cantidad": planchas_osb,
+              "Precio Unit.": 12800.0,
+          },
+          {
+              "Partida": (
+                  "Fieltro Asfáltico 15 lb / Membrana Barrera de Humedad (rollo"
+                  " 40m²)"
+              ),
+              "Cantidad": max(1.0, round(area_muros / 38.0, 1)),
+              "Precio Unit.": 18500.0,
+          },
+          {
+              "Partida": (
+                  "Revestimiento Exterior Metalsiding (incluye perfiles j y"
+                  " esquineros) (m²)"
+              ),
+              "Cantidad": m2_metalsiding,
+              "Precio Unit.": 21500.0,
+          },
+          {
+              "Partida": (
+                  f"Aislación {tipo_insul} para Muros y Cielo (m²)"
+              ),
+              "Cantidad": m2_aislacion,
+              "Precio Unit.": 4200.0,
+          },
+          {
+              "Partida": f"Revestimiento Muros {tipo_internit} (planchas)",
+              "Cantidad": planchas_internit,
+              "Precio Unit.": 11500.0,
+          },
+          {
+              "Partida": (
+                  "Revestimiento Cielo Plancha Yeso-Cartón/Internit 10mm"
+                  " (planchas)"
+              ),
+              "Cantidad": planchas_cielo,
+              "Precio Unit.": 8900.0,
+          },
+          {
+              "Partida": "Cerámico Muros Antihongo 30x60 (m²)",
+              "Cantidad": m2_ceramico_muro,
+              "Precio Unit.": 12500.0,
+          },
+          {
+              "Partida": "Cerámico Piso Antideslizante 45x45 / 60x60 (m²)",
+              "Cantidad": m2_ceramico_piso,
+              "Precio Unit.": 13800.0,
+          },
+          {
+              "Partida": (
+                  f"Adhesivo Pegamento {tipo_pegamento} (saco 25kg)"
+              ),
+              "Cantidad": sacos_pegamento,
+              "Precio Unit.": 11200.0,
+          },
+          {
+              "Partida": "Fragüe Antihongo Impermeable (kg)",
+              "Cantidad": kg_frague,
+              "Precio Unit.": 2800.0,
+          },
+          {
+              "Partida": (
+                  f"Pintura Cielo {tipo_pintura_cielo} (tineta 4gal)"
+              ),
+              "Cantidad": tinetas_pintura_cielo,
+              "Precio Unit.": 38000.0,
+          },
+          {
+              "Partida": (
+                  "Pasta Muro, Cinta Junta Fibra de Vidrio, Esquineros y"
+                  " Silicona Sanitaria (gl)"
+              ),
+              "Cantidad": 1.0,
+              "Precio Unit.": 26000.0,
+          },
+      ]
+
+  # ==========================================
   # ⚡ 1. ELECTRICIDAD
   # ==========================================
-  if "Electricidad" in recinto_actual:
+  elif "Electricidad" in recinto_actual:
     with st.expander(
         "🔌 Parámetros de la Instalación Eléctrica", expanded=True
     ):
@@ -198,21 +368,14 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
               "Cantidad": 1.0,
               "Precio Unit.": 68000.0,
           },
-          {
-              "Partida": (
-                  "Accesorios de Fijación (Abrazaderas, Cintas, Terminales) (gl)"
-              ),
-              "Cantidad": 1.0,
-              "Precio Unit.": 12500.0,
-          },
       ]
 
   # ==========================================
-  # 🎨 2. PINTURA
+  # 🎨 2. PINTURA Y CIELOS
   # ==========================================
   elif "Pintura" in recinto_actual:
     with st.expander(
-        "🖌️ Parámetros de Pintura y Preparación de Superficie", expanded=True
+        "🖌️ Parámetros de Pintura y Cielos", expanded=True
     ):
       p_tipo = st.selectbox(
           "Tipo de Pintura Principal:",
@@ -220,18 +383,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
               "Esmalte al Agua Antihongo (Semibrillo / Mate)",
               "Óleo Opaco Sintético",
               "Óleo Brillante",
-              "Látex Extra Cubriente interior",
-          ],
-      )
-      p_estado = st.selectbox(
-          "Estado de la Superficie / Preparación:",
-          [
-              "Superficie Nueva (Volcanita / Yeso limpio)",
-              "Superficie Existente con Grietas / Requiere Empaste Completo",
-              (
-                  "Estuco Vivo / Hormigón (Requiere Sellador Acrílico"
-                  " neutralizador)"
-              ),
+              "Látex Extra Cubriente Cielos",
           ],
       )
       p_manos = st.selectbox(
@@ -242,46 +394,25 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
               "3 Manos para cambio fuerte de color",
           ],
       )
-      p_diluyente = (
-          "Agua Limpia"
-          if "Agua" in p_tipo or "Látex" in p_tipo
-          else "Aguarrás Mineral / Diluyente Sintético"
-      )
 
     datos_et = {
         "Pintura": p_tipo,
-        "Preparación": p_estado,
         "Manos": p_manos,
-        "Diluyente": p_diluyente,
-        "Normativa": "NCh 331 - Pinturas y Barnices / Especificaciones Manuales de Fabricante",
+        "Normativa": "NCh 331 - Pinturas y Barnices",
     }
 
     if st.button("➕ Generar Materiales e Integrar a la Cotización"):
       cant_sup = area_muros + area_piso
       nuevos_items = [
           {
-              "Partida": f"Pintura {p_tipo} (tineta 4g / galones)",
+              "Partida": f"Pintura {p_tipo} (tineta 4g)",
               "Cantidad": max(1.0, round(cant_sup / 35.0, 1)),
               "Precio Unit.": 44000.0,
           },
           {
-              "Partida": (
-                  f"Imprimante / Sellador de Fijación ({p_diluyente}) (galón)"
-              ),
-              "Cantidad": max(1.0, round(cant_sup / 45.0, 1)),
-              "Precio Unit.": 24000.0,
-          },
-          {
-              "Partida": (
-                  f"Empaste Muros / Pasta Muro ({p_estado}) (saco/tarro)"
-              ),
+              "Partida": "Pasta Muro / Empaste (saco/tarro)",
               "Cantidad": max(1.0, round(cant_sup / 20.0, 1)),
               "Precio Unit.": 13500.0,
-          },
-          {
-              "Partida": f"Diluyente / Insumo Limpieza ({p_diluyente}) (litros)",
-              "Cantidad": 2.0 if "Aguarrás" in p_diluyente else 0.0,
-              "Precio Unit.": 4500.0,
           },
           {
               "Partida": (
@@ -290,350 +421,6 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
               "Cantidad": 1.0,
               "Precio Unit.": 16000.0,
           },
-          {
-              "Partida": "Rodillos Antigota, Brochas y Extensor Telescópico (gl)",
-              "Cantidad": 1.0,
-              "Precio Unit.": 15000.0,
-          },
-      ]
-
-  # ==========================================
-  # 🪵 3. CARPINTERÍA
-  # ==========================================
-  elif "Carpintería" in recinto_actual:
-    with st.expander(
-        "🪵 Parámetros de Estructura y Carpintería", expanded=True
-    ):
-      car_madera = st.selectbox(
-          "Tipo y Calidad de Madera / Estructura:",
-          [
-              "Pino Radiata Calibrado Seco en Cámara",
-              "Pino Oregón 2x3 / 2x4",
-              "MDF Prepintado / Terciado Estructural",
-              "Madera Nativa / Roble",
-          ],
-      )
-      car_fijaciones = st.selectbox(
-          "Tipo de Fijaciones y Ensambles:",
-          [
-              "Tornillos Spax / CRS Cincados + Tarugos",
-              "Clavos Estructurales de Impacto + Perno Anclaje",
-              "Adhesivo Montaje Profesional + Escuadras Metálicas",
-          ],
-      )
-      car_acabado = st.selectbox(
-          "Protección / Acabado Final:",
-          [
-              "Protector Lasure / Impregnante Antimanchas",
-              "Barniz Marino de Alto Brillo",
-              "Sello Primario / Oleo Base",
-              "Sin Tratamiento (Obra Gruesa)",
-          ],
-      )
-
-    datos_et = {
-        "Madera": car_madera,
-        "Fijaciones": car_fijaciones,
-        "Acabado": car_acabado,
-        "Normativa": "NCh 1198 (Cálculo de Estructuras en Madera) y NCh 1989",
-    }
-
-    if st.button("➕ Generar Materiales e Integrar a la Cotización"):
-      nuevos_items = [
-          {
-              "Partida": f"Estructura Madera {car_madera} (m² / ml)",
-              "Cantidad": round(area_muros, 2),
-              "Precio Unit.": 13500.0,
-          },
-          {
-              "Partida": f"Fijaciones y Ensambles {car_fijaciones} (caja/pack)",
-              "Cantidad": 2.0,
-              "Precio Unit.": 8500.0,
-          },
-          {
-              "Partida": "Adhesivo de Carpintería / Cola Fría Madera HD (kg)",
-              "Cantidad": 1.0,
-              "Precio Unit.": 6200.0,
-          },
-          {
-              "Partida": f"Protector / Acabado {car_acabado} (galón)",
-              "Cantidad": max(1.0, round(area_muros / 25.0, 1)),
-              "Precio Unit.": 26000.0,
-          },
-          {
-              "Partida": (
-                  "Consumibles Carpintería (Brocas, Hojas Sierra, Lijas) (gl)"
-              ),
-              "Cantidad": 1.0,
-              "Precio Unit.": 12000.0,
-          },
-      ]
-
-  # ==========================================
-  # 🧱 4. REVESTIMIENTOS
-  # ==========================================
-  elif "Revestimientos" in recinto_actual:
-    with st.expander("🧱 Parámetros de Revestimiento", expanded=True):
-      rev_tipo = st.selectbox(
-          "Tipo de Revestimiento:",
-          [
-              "Cerámico Muro 30x60",
-              "Porcelanato Piso/Muro 60x60",
-              "Siding Fibrocemento / PVC",
-              "Paletas WPC / Compuesto Madera-Plástico",
-          ],
-      )
-      rev_pegamento = st.selectbox(
-          "Tipo de Adhesivo:",
-          [
-              "Bekron AC (Cerámico Estándar)",
-              "Bekron ACI (Sustrato Rígido/Exterior)",
-              "Bekron Flex (Porcelanato/Zona Húmeda)",
-              "Mortero / Adhesivo Montaje",
-          ],
-      )
-      rev_junta = st.selectbox(
-          "Fragüe / Terminación de Junta:",
-          [
-              "Fragüe Flexible Antihongo",
-              "Fragüe Epóxico Industrial",
-              "Sellador Poliuretano",
-          ],
-      )
-
-    datos_et = {
-        "Revestimiento": rev_tipo,
-        "Adhesivo": rev_pegamento,
-        "Junta": rev_junta,
-        "Normativa": "NCh 353 (Cubicación de Obras) y Manuales Técnicos Bekron / Weber",
-    }
-
-    if st.button("➕ Generar Materiales e Integrar a la Cotización"):
-      cant_r = area_muros
-      nuevos_items = [
-          {
-              "Partida": f"Revestimiento {rev_tipo} (m²)",
-              "Cantidad": round(cant_r * 1.08, 2),
-              "Precio Unit.": 24000.0,
-          },
-          {
-              "Partida": f"Adhesivo {rev_pegamento} (saco 25kg)",
-              "Cantidad": max(1.0, round(cant_r / 3.8, 1)),
-              "Precio Unit.": 10500.0,
-          },
-          {
-              "Partida": f"{rev_junta} (kg)",
-              "Cantidad": max(1.0, round(cant_r * 0.35, 1)),
-              "Precio Unit.": 4800.0,
-          },
-          {
-              "Partida": "Sistema Niveladores, Cuñas y Crucetas (kit)",
-              "Cantidad": max(1.0, round(cant_r / 8.0, 1)),
-              "Precio Unit.": 8500.0,
-          },
-          {
-              "Partida": (
-                  "Perfiles Esquinero PVC / Alum. + Silicona Sanitaria (gl)"
-              ),
-              "Cantidad": 1.0,
-              "Precio Unit.": 12000.0,
-          },
-      ]
-
-  # ==========================================
-  # 📐 5. TERMINACIONES
-  # ==========================================
-  elif "Terminaciones" in recinto_actual:
-    with st.expander("📐 Parámetros de Terminaciones Finas", expanded=True):
-      ter_elementos = st.multiselect(
-          "Elementos a Considerar:",
-          [
-              "Guardapolvos",
-              "Junquillos",
-              "Cornisas",
-              "Tapajuntas",
-              "Burletes de Puerta",
-          ],
-          default=["Guardapolvos", "Junquillos"],
-      )
-      ter_material = st.selectbox(
-          "Materialidad de Terminaciones:",
-          [
-              "MDF Prepintado Blanco",
-              "Madera Nativa Finger Joint",
-              "PVC Resistente al Agua",
-          ],
-      )
-      ter_fijacion = st.selectbox(
-          "Método de Fijación:",
-          [
-              "Adhesivo Montaje Clavo Líquido + Clavo de Impacto",
-              "Tornillos Fijos con Tapita",
-              "Silicona Neutra",
-          ],
-      )
-
-    datos_et = {
-        "Elementos": ", ".join(ter_elementos),
-        "Material": ter_material,
-        "Fijación": ter_fijacion,
-        "Normativa": "Especificaciones de Arquitectura y Tolerancias NCh 353",
-    }
-
-    if st.button("➕ Generar Materiales e Integrar a la Cotización"):
-      cant_l = perimetro
-      nuevos_items = [
-          {
-              "Partida": (
-                  f"Terminación {ter_material} ({', '.join(ter_elementos)}) (ml)"
-              ),
-              "Cantidad": round(cant_l, 2),
-              "Precio Unit.": 4500.0,
-          },
-          {
-              "Partida": f"Fijación {ter_fijacion} + Clavo Líquido (cartuchos)",
-              "Cantidad": max(2.0, round(cant_l / 7.0, 1)),
-              "Precio Unit.": 6500.0,
-          },
-          {
-              "Partida": "Masilla Retoque, Esquinas y Silicona Terminación (gl)",
-              "Cantidad": 1.0,
-              "Precio Unit.": 8900.0,
-          },
-      ]
-
-  # ==========================================
-  # 🌿 6. PAISAJISMO
-  # ==========================================
-  elif "Paisajismo" in recinto_actual:
-    with st.expander(
-        "🌿 Parámetros de Paisajismo y Obras Exteriores", expanded=True
-    ):
-      pai_cobertera = st.selectbox(
-          "Tipo de Cobertera Vegetal / Decorativa:",
-          [
-              "Pasto en Palmetas (Tepe) Alto Tráfico",
-              "Siembra de Césped",
-              "Gravilla Decorativa / Chip de Madera",
-          ],
-      )
-      pai_riego = st.selectbox(
-          "Sistema de Riego:",
-          [
-              "Riego Automático por Aspersión / Goteo con Programador",
-              "Riego Manual por Llave de Jardín",
-              "Sin Riego",
-          ],
-      )
-      pai_tierra = st.selectbox(
-          "Acondicionamiento de Terreno:",
-          [
-              "Tierra Vegetal Cernida + Compost (10cm espesor)",
-              "Nivelación Simple con Rodillo",
-          ],
-      )
-
-    datos_et = {
-        "Cobertera": pai_cobertera,
-        "Riego": pai_riego,
-        "Terreno": pai_tierra,
-        "Normativa": "Especificaciones de Paisajismo y Conservación de Suelos",
-    }
-
-    if st.button("➕ Generar Materiales e Integrar a la Cotización"):
-      cant_j = area_piso
-      nuevos_items = [
-          {
-              "Partida": f"Tierra Vegetal / Substrato ({pai_tierra}) (m³)",
-              "Cantidad": max(1.0, round(cant_j * 0.1, 1)),
-              "Precio Unit.": 28000.0,
-          },
-          {
-              "Partida": f"Cobertera {pai_cobertera} (m²)",
-              "Cantidad": round(cant_j * 1.05, 2),
-              "Precio Unit.": 6800.0,
-          },
-          {
-              "Partida": f"{pai_riego} (kit materiales/tuberías)",
-              "Cantidad": 1.0,
-              "Precio Unit.": 75000.0,
-          },
-          {
-              "Partida": "Solerillas / Delimitadores de Jardín (ml)",
-              "Cantidad": round(perimetro, 2),
-              "Precio Unit.": 4200.0,
-          },
-      ]
-
-  # ==========================================
-  # 🔋 7. GENERADORES Y EQUIPOS
-  # ==========================================
-  elif "Generadores" in recinto_actual:
-    with st.expander(
-        "⚡ Parámetros de Generador y Grupo Electrógeno", expanded=True
-    ):
-      gen_kva = st.selectbox(
-          "Potencia Nominal del Equipo:",
-          [
-              "5 kVA (Monofásico)",
-              "8 kVA (Monofásico)",
-              "12 kVA (Trifásico)",
-              "20 kVA (Trifásico Industrial)",
-          ],
-      )
-      gen_tta = st.selectbox(
-          "Sistema de Transferencia:",
-          [
-              "Tablero de Transferencia Automática (TTA)",
-              "Conmutador Manual de Red/Generador",
-          ],
-      )
-      gen_tipo = st.selectbox(
-          "Tipo de Gabinete / Insonorización:",
-          ["Insonorizado Silent Cabin", "Gabinete Abierto sobre Chasis"],
-      )
-
-    datos_et = {
-        "Potencia": gen_kva,
-        "Transferencia": gen_tta,
-        "Gabinete": gen_tipo,
-        "Normativa": (
-            "RIC N°08 (Sistemas de Respaldo) / SEC y Normas Ambientales de"
-            " Ruido"
-        ),
-    }
-
-    if st.button("➕ Generar Materiales e Integrar a la Cotización"):
-      nuevos_items = [
-          {
-              "Partida": f"Grupo Electrógeno {gen_kva} ({gen_tipo}) (unidad)",
-              "Cantidad": 1.0,
-              "Precio Unit.": 1250000.0,
-          },
-          {
-              "Partida": f"{gen_tta} (unidad)",
-              "Cantidad": 1.0,
-              "Precio Unit.": 380000.0,
-          },
-          {
-              "Partida": "Alimentadores Principales de Fuerza y Control (m)",
-              "Cantidad": 15.0,
-              "Precio Unit.": 8500.0,
-          },
-          {
-              "Partida": (
-                  "Kit Puesta a Tierra Dedicada (Barra Cooperweld, Conector, Gel)"
-              ),
-              "Cantidad": 1.0,
-              "Precio Unit.": 65000.0,
-          },
-          {
-              "Partida": (
-                  "Protecciones Eléctricas Adicionales e Insumos Montaje (gl)"
-              ),
-              "Cantidad": 1.0,
-              "Precio Unit.": 4500.0,
-          },
       ]
 
   # ==========================================
@@ -641,42 +428,50 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
   # ==========================================
   else:
     st.write(
-        "Recinto general. Se cargará el kit estándar de Tabiquería y"
-        " Terminación."
+        "Presiona el botón para cargar partidas estándar de esta especialidad."
     )
     if st.button("➕ Generar Materiales e Integrar a la Cotización"):
       nuevos_items = [
           {
-              "Partida": "Estructura Metalcom C90x0.85 (m²)",
-              "Cantidad": round(area_muros, 2),
-              "Precio Unit.": 14200.0,
-          },
-          {
-              "Partida": "Placa Volcanita RH 12.5mm (m²)",
-              "Cantidad": round(area_muros, 2),
-              "Precio Unit.": 9800.0,
-          },
-          {
-              "Partida": "Fijaciones, Masilla, Cinta y Consumibles (gl)",
+              "Partida": "Insumos Varios / Partida Estándar (gl)",
               "Cantidad": 1.0,
-              "Precio Unit.": 22000.0,
+              "Precio Unit.": 25000.0,
           },
       ]
 
-  # GUARDAR DATOS SI SE GENERARON
+  # LÓGICA DE ACUMULACIÓN Y REFRESCO
   if nuevos_items:
-    st.session_state["partidas_recintos"][recinto_actual] = nuevos_items
-    st.session_state["detalles_tecnicos"][recinto_actual] = datos_et
-    st.success(
-        f"✅ ¡Kit de materiales y parámetros técnicos de **{recinto_actual}**"
-        " guardados correctamente!"
+    existentes = st.session_state["partidas_recintos"].get(recinto_actual, [])
+    st.session_state["partidas_recintos"][recinto_actual] = (
+        existentes + nuevos_items
     )
+    st.session_state["detalles_tecnicos"][recinto_actual] = datos_et
+
+    key_editor = f"editor_{recinto_actual}"
+    if key_editor in st.session_state:
+      del st.session_state[key_editor]
+
+    st.success(
+        f"✅ ¡Se agregaron {len(nuevos_items)} partidas acumuladas a"
+        f" **{recinto_actual}**!"
+    )
+    st.rerun()
 
   st.markdown("---")
-  st.markdown(
-      f"### ✏️ Gestor Interactiva de Partidas: **{recinto_actual}** (Edita"
-      " Cantidades o Precios)"
-  )
+  col_t1, col_t2 = st.columns([3, 1])
+  with col_t1:
+    st.markdown(
+        f"### ✏️ Gestor Interactivo: **{recinto_actual}** (Edita o modifica"
+        " valores)"
+    )
+  with col_t2:
+    if st.button("🗑️ Vaciar este Recinto"):
+      st.session_state["partidas_recintos"][recinto_actual] = []
+      key_editor = f"editor_{recinto_actual}"
+      if key_editor in st.session_state:
+        del st.session_state[key_editor]
+      st.rerun()
+
   if (
       recinto_actual in st.session_state["partidas_recintos"]
       and st.session_state["partidas_recintos"][recinto_actual]
@@ -685,7 +480,6 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
         st.session_state["partidas_recintos"][recinto_actual]
     )
 
-    # TABLA EDITABLE CON DATA_EDITOR
     df_editado = st.data_editor(
         df_actual,
         num_rows="dynamic",
@@ -693,12 +487,14 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
         key=f"editor_{recinto_actual}",
     )
 
-    # ACTUALIZAR SESSION STATE CON CAMBIOS EN TIEMPO REAL
     st.session_state["partidas_recintos"][recinto_actual] = df_editado.to_dict(
         "records"
     )
   else:
-    st.info("Aún no se han configurado ítems para esta especialidad.")
+    st.info(
+        "Aún no hay partidas cargadas para esta especialidad. Presiona '➕"
+        " Generar Materiales' arriba."
+    )
 
 # ----------------- MÓDULO 2 -----------------
 elif modulo == "2. Registro Fotográfico y Planos":
@@ -716,7 +512,9 @@ elif modulo == "3. Especificaciones Técnicas Detalladas (E.T.)":
   st.subheader("📄 ESPECIFICACIONES TÉCNICAS DINÁMICAS Y DETALLADAS (E.T.)")
   st.markdown("---")
   st.markdown("### 🏛️ PROYECTO: ESPECIALIDADES ECOLUZ SpA")
-  st.markdown("**Constructor Responsable:** Constructor Civil - Concepción, Chile")
+  st.markdown(
+      "**Constructor Responsable:** Constructor Civil - Concepción, Chile"
+  )
   st.markdown("---")
 
   if st.session_state["partidas_recintos"]:
@@ -726,7 +524,6 @@ elif modulo == "3. Especificaciones Técnicas Detalladas (E.T.)":
         st.markdown(f"### 📌 ESPECIALIDAD / SECTOR: {recinto}")
         texto_et_exportar += f"ESPECIALIDAD / SECTOR: {recinto}\n"
 
-        # MOSTRAR CUESTIONARIO TÉCNICO RESPONDIDO
         if (
             recinto in st.session_state["detalles_tecnicos"]
             and st.session_state["detalles_tecnicos"][recinto]
@@ -833,7 +630,6 @@ elif modulo == "5. Cierre Económico y Presupuesto":
     st.markdown(f"- **IVA (19%):** 💲 `{iva:,.0f}`")
     st.markdown(f"## 💰 **TOTAL PROPUESTA (CON IVA):** 💲 `{total:,.0f}`")
 
-    # BOTÓN DE DESCARGA A EXCEL
     excel_bytes = generar_excel_presupuesto(
         df_cliente, costo_directo, gg_util, subtotal, iva, total
     )
