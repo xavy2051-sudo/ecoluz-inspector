@@ -1,6 +1,5 @@
-streamlit
-pandas
-openpyxl
-python-docx
-reportlab
-Pillow
+streamlit>=1.30.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+google-genai>=0.1.0
+sqlite3-binary>=0.1.0
