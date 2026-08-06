@@ -93,7 +93,23 @@ def init_db():
       except Exception:
         pass
 
-  # 1.3 Tabla Maestra de Materiales e Insumos (Opción A)
+  # 1.3 Tabla de Levantamiento por Recintos (MÓDULO 2)
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recintos_levantamiento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            proyecto_id INTEGER,
+            nombre_recinto TEXT NOT NULL,
+            puntos_enchufes INTEGER DEFAULT 0,
+            centros_iluminacion INTEGER DEFAULT 0,
+            interruptores INTEGER DEFAULT 0,
+            puntos_fuerza_clima INTEGER DEFAULT 0,
+            estado_canalizacion TEXT DEFAULT 'Conforme',
+            observaciones_ito TEXT,
+            FOREIGN KEY (proyecto_id) REFERENCES proyectos (id) ON DELETE CASCADE
+        )
+    """)
+
+  # 1.4 Tabla Maestra de Materiales e Insumos (Opción A)
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS materiales_master (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,7 +194,7 @@ def init_db():
         materiales_semilla,
     )
 
-  # 1.4 Tabla de Partidas APU
+  # 1.5 Tabla de Partidas APU
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS partidas_apu (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,7 +235,7 @@ def init_db():
         partidas_semilla,
     )
 
-  # 1.5 Receta APU (Composición de Partidas)
+  # 1.6 Receta APU (Composición de Partidas)
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS apu_receta (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -234,26 +250,23 @@ def init_db():
   cursor.execute("SELECT COUNT(*) FROM apu_receta")
   if cursor.fetchone()[0] == 0:
     recetas_semilla = [
-        # Punto Enchufe Doble
-        (1, 4, 1.0),  # 1 Enchufe
-        (1, 7, 1.0),  # 1 Caja Chuqui
-        (1, 6, 1.0),  # 1 Tubo Conduit
-        (1, 1, 3.5),  # 3.5m Cable Rojo
-        (1, 2, 3.5),  # 3.5m Cable Blanco
-        (1, 3, 3.5),  # 3.5m Cable Verde
-        (1, 10, 0.40),  # 0.40 HH Maestro
-        # Punto Centro LED
-        (2, 5, 1.0),  # 1 Downlight
-        (2, 7, 1.0),  # 1 Caja
-        (2, 6, 1.0),  # 1 Tubo Conduit
-        (2, 1, 3.0),  # 3m Cable
-        (2, 2, 3.0),  # 3m Cable
-        (2, 3, 3.0),  # 3m Cable
-        (2, 10, 0.35),  # 0.35 HH Maestro
-        # Tablero 12 Módulos
-        (3, 8, 3.0),  # 3 Automáticos
-        (3, 9, 1.0),  # 1 Diferencial
-        (3, 10, 2.00),  # 2.0 HH Maestro
+        (1, 4, 1.0),
+        (1, 7, 1.0),
+        (1, 6, 1.0),
+        (1, 1, 3.5),
+        (1, 2, 3.5),
+        (1, 3, 3.5),
+        (1, 10, 0.40),
+        (2, 5, 1.0),
+        (2, 7, 1.0),
+        (2, 6, 1.0),
+        (2, 1, 3.0),
+        (2, 2, 3.0),
+        (2, 3, 3.0),
+        (2, 10, 0.35),
+        (3, 8, 3.0),
+        (3, 9, 1.0),
+        (3, 10, 2.00),
     ]
     cursor.executemany(
         """
@@ -263,7 +276,7 @@ def init_db():
         recetas_semilla,
     )
 
-  # 1.6 Historial de Cotizaciones y Versiones
+  # 1.7 Historial de Cotizaciones y Versiones
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS cotizaciones_versiones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -338,6 +351,8 @@ menu_opcion = st.sidebar.radio(
     ],
 )
 
+proy_id = st.session_state.get("proyecto_id")
+
 # ==========================================
 # MÓDULO 1: INFORMACIÓN GENERAL Y FACTIBILIDAD
 # ==========================================
@@ -391,8 +406,6 @@ if "📌 1. Información General" in menu_opcion:
               ),
           )
           nuevo_id = c.lastrowid
-
-          # Crear registro base en factibilidad
           c.execute(
               "INSERT INTO factibilidad (proyecto_id) VALUES (?)", (nuevo_id,)
           )
@@ -400,15 +413,10 @@ if "📌 1. Información General" in menu_opcion:
           conn.close()
 
           st.session_state["proyecto_id"] = nuevo_id
-          st.success(
-              f"✅ Proyecto N° {nuevo_id} registrado con éxito. "
-          )
+          st.success(f"✅ Proyecto N° {nuevo_id} registrado con éxito.")
           st.rerun()
         else:
           st.error("Por favor ingresa el nombre del cliente.")
-
-  # Cargar datos del proyecto activo si existe
-  proy_id = st.session_state.get("proyecto_id")
 
   if proy_id:
     conn = get_connection()
@@ -419,44 +427,124 @@ if "📌 1. Información General" in menu_opcion:
 
     # TAB 2: FACTIBILIDAD ELÉCTRICA (OPCIÓN B)
     with tab_fact_elec:
-      st.markdown("### ⚡ Check-list Unificado de Factibilidad Eléctrica (RIC / SEC)")
-      st.caption("Fuente única de verdad para el estado eléctrico inicial del proyecto.")
+      st.markdown(
+          "### ⚡ Check-list Unificado de Factibilidad Eléctrica (RIC / SEC)"
+      )
+      st.caption(
+          "Fuente única de verdad para el estado eléctrico inicial del"
+          " proyecto."
+      )
 
       with st.form("form_fact_elec"):
         c_fe1, c_fe2, c_fe3 = st.columns(3)
 
         with c_fe1:
           st.subheader("1. Red y Suministro")
-          sum_elec = st.checkbox("¿Existe suministro eléctrico activo?", value=bool(row_f["suministro_elec"]) if row_f else True)
-          emp_elec = st.checkbox("¿Existe empalme ejecutado?", value=bool(row_f["empalme_elec"]) if row_f else True)
-          tipo_emp = st.selectbox("Tipo de Empalme:", ["Monofásico (1Ф)", "Trifásico (3Ф)"], index=0 if (not row_f or row_f["tipo_empalme"] == "Monofásico (1Ф)") else 1)
-          req_emp = st.checkbox("¿Se requiere NUEVO empalme?", value=bool(row_f["requiere_nuevo_empalme"]) if row_f else False)
-          distrib = st.selectbox("Empresa Distribuidora:", ["CGE", "Enel", "Saesa", "Chilquinta", "Frontel", "Luz Linares", "Otra"], index=0)
+          sum_elec = st.checkbox(
+              "¿Existe suministro eléctrico activo?",
+              value=bool(row_f["suministro_elec"]) if row_f else True,
+          )
+          emp_elec = st.checkbox(
+              "¿Existe empalme ejecutado?",
+              value=bool(row_f["empalme_elec"]) if row_f else True,
+          )
+          tipo_emp = st.selectbox(
+              "Tipo de Empalme:",
+              ["Monofásico (1Ф)", "Trifásico (3Ф)"],
+              index=(
+                  0
+                  if (not row_f or row_f["tipo_empalme"] == "Monofásico (1Ф)")
+                  else 1
+              ),
+          )
+          req_emp = st.checkbox(
+              "¿Se requiere NUEVO empalme?",
+              value=bool(row_f["requiere_nuevo_empalme"]) if row_f else False,
+          )
+          distrib = st.selectbox(
+              "Empresa Distribuidora:",
+              [
+                  "CGE",
+                  "Enel",
+                  "Saesa",
+                  "Chilquinta",
+                  "Frontel",
+                  "Luz Linares",
+                  "Otra",
+              ],
+              index=0,
+          )
 
         with c_fe2:
           st.subheader("2. Potencia y Tableros")
-          pot_disp = st.text_input("Potencia Instalada / Disyuntor General:", value=row_f["potencia_disponible"] if row_f else "25A")
-          pot_req = st.text_input("Potencia Requerida por Proyecto:", value=row_f["potencia_requerida"] if row_f else "40A")
-          aum_cap = st.checkbox("¿Se requiere Aumento de Capacidad?", value=bool(row_f["aumento_capacidad"]) if row_f else False)
-          medidor = st.checkbox("¿Existe Medidor Instalado?", value=bool(row_f["medidor_existente"]) if row_f else True)
-          tablero = st.checkbox("¿Tablero TDA cumple norma vigente?", value=bool(row_f["tablero_conforme"]) if row_f else True)
+          pot_disp = st.text_input(
+              "Potencia Instalada / Disyuntor General:",
+              value=row_f["potencia_disponible"] if row_f else "25A",
+          )
+          pot_req = st.text_input(
+              "Potencia Requerida por Proyecto:",
+              value=row_f["potencia_requerida"] if row_f else "40A",
+          )
+          aum_cap = st.checkbox(
+              "¿Se requiere Aumento de Capacidad?",
+              value=bool(row_f["aumento_capacidad"]) if row_f else False,
+          )
+          medidor = st.checkbox(
+              "¿Existe Medidor Instalado?",
+              value=bool(row_f["medidor_existente"]) if row_f else True,
+          )
+          tablero = st.checkbox(
+              "¿Tablero TDA cumple norma vigente?",
+              value=bool(row_f["tablero_conforme"]) if row_f else True,
+          )
 
         with c_fe3:
           st.subheader("3. Protecciones y SEC")
-          puesta_t = st.checkbox("¿Existe Malla/Puesta a Tierra probada?", value=bool(row_f["puesta_tierra"]) if row_f else False)
-          cert_sec = st.checkbox("¿Cuenta con Declaración TE1 previa?", value=bool(row_f["certificado_sec"]) if row_f else False)
-          req_proj = st.checkbox("¿Se requiere Proyecto Eléctrico Firmado?", value=bool(row_f["requiere_proyecto_sec"]) if row_f else False)
-          req_te1 = st.checkbox("¿Se requiere Nueva Declaración TE1 SEC?", value=bool(row_f["requiere_declaracion_sec"]) if row_f else True)
+          puesta_t = st.checkbox(
+              "¿Existe Malla/Puesta a Tierra probada?",
+              value=bool(row_f["puesta_tierra"]) if row_f else False,
+          )
+          cert_sec = st.checkbox(
+              "¿Cuenta con Declaración TE1 previa?",
+              value=bool(row_f["certificado_sec"]) if row_f else False,
+          )
+          req_proj = st.checkbox(
+              "¿Se requiere Proyecto Eléctrico Firmado?",
+              value=bool(row_f["requiere_proyecto_sec"]) if row_f else False,
+          )
+          req_te1 = st.checkbox(
+              "¿Se requiere Nueva Declaración TE1 SEC?",
+              value=bool(row_f["requiere_declaracion_sec"]) if row_f else True,
+          )
 
         if st.form_submit_button("💾 Guardar Factibilidad Eléctrica"):
           conn = get_connection()
-          conn.execute("""
+          conn.execute(
+              """
               UPDATE factibilidad SET
                   suministro_elec=?, empalme_elec=?, tipo_empalme=?, requiere_nuevo_empalme=?, empresa_distribuidora=?,
                   potencia_disponible=?, potencia_requerida=?, aumento_capacidad=?, medidor_existente=?, tablero_conforme=?,
                   puesta_tierra=?, certificado_sec=?, requiere_proyecto_sec=?, requiere_declaracion_sec=?
               WHERE proyecto_id=?
-          """, (sum_elec, emp_elec, tipo_emp, req_emp, distrib, pot_disp, pot_req, aum_cap, medidor, tablero, puesta_t, cert_sec, req_proj, req_te1, proy_id))
+          """,
+              (
+                  sum_elec,
+                  emp_elec,
+                  tipo_emp,
+                  req_emp,
+                  distrib,
+                  pot_disp,
+                  pot_req,
+                  aum_cap,
+                  medidor,
+                  tablero,
+                  puesta_t,
+                  cert_sec,
+                  req_proj,
+                  req_te1,
+                  proy_id,
+              ),
+          )
           conn.commit()
           conn.close()
           st.success("✅ Factibilidad Eléctrica actualizada correctamente.")
@@ -467,27 +555,239 @@ if "📌 1. Información General" in menu_opcion:
       with st.form("form_fact_gen"):
         cg1, cg2 = st.columns(2)
         with cg1:
-          p_dom = st.checkbox(" Permiso de Edificación DOM", value=bool(row_f["permiso_dom"]) if row_f else False)
-          r_fin = st.checkbox(" Recepción Final DOM", value=bool(row_f["recepcion_final"]) if row_f else False)
-          f_agu = st.checkbox(" Factibilidad Agua Potable", value=bool(row_f["fact_agua"]) if row_f else True)
-          f_alc = st.checkbox(" Factibilidad Alcantarillado", value=bool(row_f["alcantarillado"]) if row_f else True)
+          p_dom = st.checkbox(
+              " Permiso de Edificación DOM",
+              value=bool(row_f["permiso_dom"]) if row_f else False,
+          )
+          r_fin = st.checkbox(
+              " Recepción Final DOM",
+              value=bool(row_f["recepcion_final"]) if row_f else False,
+          )
+          f_agu = st.checkbox(
+              " Factibilidad Agua Potable",
+              value=bool(row_f["fact_agua"]) if row_f else True,
+          )
+          f_alc = st.checkbox(
+              " Factibilidad Alcantarillado",
+              value=bool(row_f["alcantarillado"]) if row_f else True,
+          )
         with cg2:
-          r_arq = st.checkbox(" Requiere Proyecto Arquitectura", value=bool(row_f["requiere_arqui"]) if row_f else False)
-          r_cal = st.checkbox(" Requiere Cálculo Estructural", value=bool(row_f["requiere_calculo"]) if row_f else False)
-          r_top = st.checkbox(" Requiere Levantamiento Topográfico", value=bool(row_f["requiere_topografia"]) if row_f else False)
-          r_sue = st.checkbox(" Requiere Estudio de Suelos", value=bool(row_f["requiere_suelos"]) if row_f else False)
+          r_arq = st.checkbox(
+              " Requiere Proyecto Arquitectura",
+              value=bool(row_f["requiere_arqui"]) if row_f else False,
+          )
+          r_cal = st.checkbox(
+              " Requiere Cálculo Estructural",
+              value=bool(row_f["requiere_calculo"]) if row_f else False,
+          )
+          r_top = st.checkbox(
+              " Requiere Levantamiento Topográfico",
+              value=bool(row_f["requiere_topografia"]) if row_f else False,
+          )
+          r_sue = st.checkbox(
+              " Requiere Estudio de Suelos",
+              value=bool(row_f["requiere_suelos"]) if row_f else False,
+          )
 
         if st.form_submit_button("💾 Guardar Factibilidad General"):
           conn = get_connection()
-          conn.execute("""
+          conn.execute(
+              """
               UPDATE factibilidad SET
                   permiso_dom=?, recepcion_final=?, fact_agua=?, alcantarillado=?,
                   requiere_arqui=?, requiere_calculo=?, requiere_topografia=?, requiere_suelos=?
               WHERE proyecto_id=?
-          """, (p_dom, r_fin, f_agu, f_alc, r_arq, r_cal, r_top, r_sue, proy_id))
+          """,
+              (
+                  p_dom,
+                  r_fin,
+                  f_agu,
+                  f_alc,
+                  r_arq,
+                  r_cal,
+                  r_top,
+                  r_sue,
+                  proy_id,
+              ),
+          )
           conn.commit()
           conn.close()
           st.success("✅ Factibilidad General guardada.")
+
+# ==========================================
+# MÓDULO 2: LEVANTAMIENTO POR RECINTOS (ITO)
+# ==========================================
+elif "📊 2. Levantamiento por Recintos" in menu_opcion:
+  st.title("📊 Levantamiento Técnico e Inspección por Recintos (ITO)")
+
+  if not proy_id:
+    st.warning(
+        "⚠️ Debes seleccionar o crear un proyecto activo antes de ingresar"
+        " recintos."
+    )
+  else:
+    tab_ingreso_rec, tab_resumen_cub = st.tabs([
+        "📝 Inspección en Terreno por Recinto",
+        "📋 Cubicación y Resumen Consolidado",
+    ])
+
+    conn = get_connection()
+
+    # TAB 1: INGRESO DE RECINTOS
+    with tab_ingreso_rec:
+      st.subheader("📍 Levantamiento de Puntos Eléctricos por Espacio")
+
+      with st.form("form_recinto"):
+        cr1, cr2 = st.columns(2)
+        with cr1:
+          nombre_rec = st.selectbox(
+              "Seleccionar / Tipo de Recinto:",
+              [
+                  "Cocina",
+                  "Estar / Comedor",
+                  "Dormitorio Principal",
+                  "Dormitorio 2",
+                  "Dormitorio 3",
+                  "Baño Principal",
+                  "Baño Visitas",
+                  "Pasillo / Acceso",
+                  "Exterior / Fachada",
+                  "Zona de Servicio / Logia",
+                  "Oficina / Taller",
+                  "Otro Recinto",
+              ],
+          )
+          num_enchufes = st.number_input(
+              "Puntos de Enchufes (Simples/Dobles):",
+              min_value=0,
+              value=2,
+              step=1,
+          )
+          num_centros = st.number_input(
+              "Centros de Alumbrado / Luminarias:",
+              min_value=0,
+              value=1,
+              step=1,
+          )
+
+        with cr2:
+          num_interruptores = st.number_input(
+              "Interruptores (Simple/Doble/9/24):",
+              min_value=0,
+              value=1,
+              step=1,
+          )
+          num_fuerza = st.number_input(
+              "Puntos Especiales / Fuerza (Clima, Horno, Bomba):",
+              min_value=0,
+              value=0,
+              step=1,
+          )
+          est_canal = st.selectbox(
+              "Estado de Canalizaciones y Cajas Existentes:",
+              [
+                  "Conforme / Normalizado",
+                  "Requiere Cambio de Conductores",
+                  "Canalización Incompleta",
+                  "Sin Canalización (Obra Gruesa)",
+              ],
+          )
+
+        obs_ito = st.text_area(
+            "Observaciones del Inspector ITO en Terreno:",
+            placeholder=(
+                "Ejemplo: Canalización en tubo PVC de 20mm. Falta conductor de"
+                " tierra de protección en enchufes de mesón."
+            ),
+        )
+
+        if st.form_submit_button("➕ Agregar Recinto al Proyecto"):
+          c = conn.cursor()
+          c.execute(
+              """
+                        INSERT INTO recintos_levantamiento 
+                        (proyecto_id, nombre_recinto, puntos_enchufes, centros_iluminacion, interruptores, puntos_fuerza_clima, estado_canalizacion, observaciones_ito)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+              (
+                  proy_id,
+                  nombre_rec,
+                  num_enchufes,
+                  num_centros,
+                  num_interruptores,
+                  num_fuerza,
+                  est_canal,
+                  obs_ito,
+              ),
+          )
+          conn.commit()
+          st.success(f"✅ Recinto **{nombre_rec}** guardado correctamente.")
+          st.rerun()
+
+    # TAB 2: RESUMEN Y CUBICACIÓN
+    with tab_resumen_cub:
+      st.subheader("📋 Consolidado de Cubicaciones para Presupuesto")
+
+      df_recintos = pd.read_sql_query(
+          """
+                SELECT id, nombre_recinto AS [Recinto], puntos_enchufes AS [Puntos Enchufe], 
+                       centros_iluminacion AS [Centros Alumbrado], interruptores AS [Interruptores], 
+                       puntos_fuerza_clima AS [Líneas Fuerza], estado_canalizacion AS [Estado Canalización], 
+                       observaciones_ito AS [Observaciones ITO]
+                FROM recintos_levantamiento 
+                WHERE proyecto_id = ?
+            """,
+          conn,
+          params=(proy_id,),
+      )
+
+      if df_recintos.empty:
+        st.info(
+            "ℹ️ Aún no se han registrado recintos para este proyecto. Utiliza"
+            " la pestaña anterior para ingresar los datos de terreno."
+        )
+      else:
+        st.dataframe(
+            df_recintos.drop(columns=["id"]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        # Totales CUBICACIÓN DIRECTA
+        tot_enc = df_recintos["Puntos Enchufe"].sum()
+        tot_lum = df_recintos["Centros Alumbrado"].sum()
+        tot_int = df_recintos["Interruptores"].sum()
+        tot_fue = df_recintos["Líneas Fuerza"].sum()
+
+        st.markdown("---")
+        st.markdown("### 🧮 Total Cubicado (Consolidado de Obra)")
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Total Puntos Enchufes", f"{tot_enc} pts")
+        k2.metric("Total Centros Alumbrado", f"{tot_lum} pts")
+        k3.metric("Total Interruptores", f"{tot_int} pts")
+        k4.metric("Total Líneas Fuerza / Clima", f"{tot_fue} pts")
+
+        # Opción para eliminar recinto seleccionado
+        st.markdown("---")
+        with st.expander("🗑️ Eliminar un Recinto Registrado"):
+          rec_del = st.selectbox(
+              "Selecciona recinto a eliminar:",
+              options=df_recintos["id"].tolist(),
+              format_func=lambda x: (
+                  f"ID {x} - "
+                  f"{df_recintos[df_recintos['id']==x]['Recinto'].values[0]}"
+              ),
+          )
+          if st.button("Eliminar Recinto"):
+            conn.execute(
+                "DELETE FROM recintos_levantamiento WHERE id = ?", (rec_del,)
+            )
+            conn.commit()
+            st.warning("Recinto eliminado.")
+            st.rerun()
+
+    conn.close()
 
 # ==========================================
 # MÓDULO 5: ANÁLISIS DE PRECIOS UNITARIOS (OPCIÓN A)
@@ -503,23 +803,45 @@ elif "💰 5. Análisis de Precios Unitarios" in menu_opcion:
 
   conn = get_connection()
 
-  # TAB 1: BASE DE DATOS MAESTRA (ÚNICA EDITABLE)
+  # TAB 1: BASE DE DATOS MAESTRA (EDITABLE)
   with tab_mat:
     st.subheader("📦 Base de Datos Centralizada de Insumos y Precios Base")
-    st.info("💡 **Regla de Negocio:** Modifica aquí los precios base de los materiales. El sistema re-calculará automáticamente todos los APU, partidas y totales sin alterar fórmulas.")
+    st.info(
+        "💡 **Regla de Negocio:** Modifica aquí los precios base de los"
+        " materiales. El sistema re-calculará automáticamente todos los APU,"
+        " partidas y totales sin alterar fórmulas."
+    )
 
-    df_materiales = pd.read_sql_query("SELECT id, codigo, nombre, categoria, unidad, precio_unitario, porcentaje_perdida FROM materiales_master", conn)
+    df_materiales = pd.read_sql_query(
+        "SELECT id, codigo, nombre, categoria, unidad, precio_unitario,"
+        " porcentaje_perdida FROM materiales_master",
+        conn,
+    )
 
     edited_df = st.data_editor(
         df_materiales,
         column_config={
             "id": None,
-            "codigo": st.column_config.TextColumn("Código Insumo", disabled=True),
-            "nombre": st.column_config.TextColumn("Descripción Insumo", disabled=True),
-            "categoria": st.column_config.TextColumn("Categoría", disabled=True),
+            "codigo": st.column_config.TextColumn(
+                "Código Insumo", disabled=True
+            ),
+            "nombre": st.column_config.TextColumn(
+                "Descripción Insumo", disabled=True
+            ),
+            "categoria": st.column_config.TextColumn(
+                "Categoría", disabled=True
+            ),
             "unidad": st.column_config.TextColumn("Unidad", disabled=True),
-            "precio_unitario": st.column_config.NumberColumn("Precio Base ($)", min_value=0, step=100, format="$%d"),
-            "porcentaje_perdida": st.column_config.NumberColumn("% Pérdida / Merma", min_value=0.0, max_value=25.0, step=0.5, format="%.1f %%")
+            "precio_unitario": st.column_config.NumberColumn(
+                "Precio Base ($)", min_value=0, step=100, format="$%d"
+            ),
+            "porcentaje_perdida": st.column_config.NumberColumn(
+                "% Pérdida / Merma",
+                min_value=0.0,
+                max_value=25.0,
+                step=0.5,
+                format="%.1f %%",
+            ),
         },
         hide_index=True,
         use_container_width=True,
@@ -543,7 +865,11 @@ elif "💰 5. Análisis de Precios Unitarios" in menu_opcion:
   # TAB 2: DETALLE APU (SOLO LECTURA)
   with tab_apu_read:
     st.subheader("🔍 Desglose de Costo Directo por Partida")
-    st.warning("🔒 **Valores Protegidos:** Esta tabla es de solo lectura. Los subtotales se obtienen multiplicando el Rendimiento × (1 + %Pérdida) × Precio Base.")
+    st.warning(
+        "🔒 **Valores Protegidos:** Esta tabla es de solo lectura. Los"
+        " subtotales se obtienen multiplicando el Rendimiento × (1 + %Pérdida) ×"
+        " Precio Base."
+    )
 
     query_apu_detalle = """
         SELECT 
@@ -573,7 +899,7 @@ elif "💰 5. Análisis de Precios Unitarios" in menu_opcion:
     with col_g2:
       pct_util = st.number_input("% Utilidad", value=10.0, step=1.0)
 
-    # Cálculo dinámico cascada
+    # Cálculo dinámico
     query_costo_partidas = """
         SELECT 
             p.id AS partida_id,
@@ -587,7 +913,24 @@ elif "💰 5. Análisis de Precios Unitarios" in menu_opcion:
         GROUP BY p.id
     """
     df_partidas = pd.read_sql_query(query_costo_partidas, conn)
-    df_partidas["Cantidad Obra"] = 10.0  # Cantidad cubicada de ejemplo
+
+    # Cargar cubicación real desde recintos si existen datos
+    if proy_id:
+      rec_df = pd.read_sql_query(
+          "SELECT SUM(puntos_enchufes) as tot_enc, SUM(centros_iluminacion)"
+          " as tot_lum FROM recintos_levantamiento WHERE proyecto_id = ?",
+          conn,
+          params=(proy_id,),
+      )
+      c_enc = rec_df["tot_enc"].iloc[0] or 1.0
+      c_lum = rec_df["tot_lum"].iloc[0] or 1.0
+    else:
+      c_enc, c_lum = 1.0, 1.0
+
+    cantidades_dict = {1: float(c_enc), 2: float(c_lum), 3: 1.0}
+    df_partidas["Cantidad Obra"] = df_partidas["partida_id"].map(
+        lambda x: cantidades_dict.get(x, 1.0)
+    )
     df_partidas["Total Directo $"] = (
         df_partidas["Costo Unitario Directo"] * df_partidas["Cantidad Obra"]
     )
