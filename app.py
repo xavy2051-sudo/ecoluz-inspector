@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 # ==========================================
-# 1. BASE DE DATOS LOCAL (SQLite Completa)
+# 1. BASE DE DATOS LOCAL (SQLite Completa + Migración)
 # ==========================================
 DB_NAME = "ecoluz.db"
 
@@ -14,6 +14,7 @@ def init_db():
   conn = sqlite3.connect(DB_NAME)
   cursor = conn.cursor()
 
+  # 1. Crear tabla de proyectos si no existe
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS proyectos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +27,16 @@ def init_db():
         )
     """)
 
+  # Migración automática si la tabla venía de una versión anterior sin tipo_obra
+  cursor.execute("PRAGMA table_info(proyectos)")
+  columnas = [col[1] for col in cursor.fetchall()]
+  if "tipo_obra" not in columnas:
+    cursor.execute(
+        "ALTER TABLE proyectos ADD COLUMN tipo_obra TEXT DEFAULT 'Construcción"
+        " General'"
+    )
+
+  # 2. Tablas complementarias
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS factibilidad (
             proyecto_id INTEGER PRIMARY KEY,
@@ -285,10 +296,6 @@ class TechnicalLibraryEngine:
 
   @staticmethod
   def obtener_materiales_con_dependencias(partida, parametros):
-    """Genera la lista de materiales principales, secundarios y consumibles agregando
-
-    automáticamente sus dependencias físicas y normativas.
-    """
     materiales = []
     m2 = parametros.get("m2", 10.0)
 
@@ -301,7 +308,6 @@ class TechnicalLibraryEngine:
           "Precio Unitario ($)": 13500,
           "Tipo": "Principal",
       })
-      # Dependencias automáticas
       tipo_adh = (
           "Bekron DA"
           if parametros.get("es_zona_humeda", False)
@@ -367,7 +373,6 @@ class TechnicalLibraryEngine:
           "Precio Unitario ($)": 5600,
           "Tipo": "Principal",
       })
-      # Dependencias
       materiales.append({
           "Item / Insumo": "Tornillo Framing 8x1/2 Autoperforante",
           "Cantidad": max(1.0, round((m2 * 45) / 500, 1)),
@@ -457,7 +462,9 @@ class TechnicalLibraryEngine:
     # IMPERMEABILIZACIÓN
     elif partida == "Impermeabilización":
       materiales.append({
-          "Item / Insumo": "Membrana Elástomérica Bi-componente (Especial Zona Húmeda)",
+          "Item / Insumo": (
+              "Membrana Elástomérica Bi-componente (Especial Zona Húmeda)"
+          ),
           "Cantidad": round(m2 * 1.15, 1),
           "Unidad": "m²",
           "Precio Unitario ($)": 6800,
@@ -498,9 +505,7 @@ class AdvancedAuditEngine:
     total_puntos = 0
     puntos_ok = 0
 
-    # 1. Auditoría de Factibilidad Legales y SEC
     if factibilidad_row:
-      # Factibilidad Electricidad
       total_puntos += 1
       if factibilidad_row[14]:  # puesta_tierra
         puntos_ok += 1
@@ -525,7 +530,6 @@ class AdvancedAuditEngine:
             " aumento de capacidad."
         )
 
-      # Factibilidad DOM
       total_puntos += 1
       if factibilidad_row[1]:  # permiso_dom
         puntos_ok += 1
@@ -538,7 +542,6 @@ class AdvancedAuditEngine:
             " ante la DOM."
         )
 
-    # 2. Auditoría Técnica Cruzada por Recintos
     for rec_nombre, partidas in levantamientos_dict.items():
       es_zona_humeda = rec_nombre in [
           "Baño Principal",
@@ -548,7 +551,6 @@ class AdvancedAuditEngine:
           "Lavandería",
       ]
 
-      # Regla: Zona Húmeda sin Impermeabilización
       if es_zona_humeda:
         total_puntos += 1
         if "Impermeabilización" in partidas:
@@ -562,7 +564,6 @@ class AdvancedAuditEngine:
               " se ha activado la partida de 'Impermeabilización'."
           )
 
-        # Regla: Revestimiento Interior en Zona Húmeda (Volcanita RH vs ST)
         if "Revestimiento Interior" in partidas:
           total_puntos += 1
           params = partidas["Revestimiento Interior"]
@@ -579,7 +580,6 @@ class AdvancedAuditEngine:
                 " zona húmeda."
             )
 
-      # Regla: Metalcom Estructural sin espesor definido
       if "Estructura" in partidas:
         params = partidas["Estructura"]
         if params.get("sistema") == "Metalcom":
@@ -592,7 +592,6 @@ class AdvancedAuditEngine:
           else:
             puntos_ok += 1
 
-      # Regla: Cerámicos definidos pero sin Adhesivo/Fragüe
       if "Cerámicos" in partidas or "Porcelanatos" in partidas:
         total_puntos += 1
         puntos_ok += 1
@@ -601,11 +600,9 @@ class AdvancedAuditEngine:
             " Niveladores) vinculados automáticamente."
         )
 
-    # Cálculo final de completitud
     porcentaje = (
         int((puntos_ok / max(1, total_puntos)) * 100) if total_puntos > 0 else 0
     )
-
     return porcentaje, alertas, verificaciones_exitosas
 
 
@@ -620,13 +617,11 @@ st.set_page_config(
 
 init_db()
 
-# Session State Initialization
 if "levantamiento" not in st.session_state:
-  st.session_state["levantamiento"] = {}  # {recinto: {partida: {parametros}}}
+  st.session_state["levantamiento"] = {}
 
 st.title("🏗️ ECOLUZ — Plataforma de Inspección Técnica & Presupuestos")
 
-# Navegación del Sistema (Inspirada en flujo ITO)
 st.sidebar.title("🧭 Navegación Principal")
 seccion = st.sidebar.radio(
     "Ir a:",
@@ -642,7 +637,6 @@ seccion = st.sidebar.radio(
 
 st.sidebar.divider()
 
-# Selector de Proyecto Activo
 st.sidebar.subheader("📌 Proyecto en Ejecución")
 df_proys = obtener_proyectos()
 if not df_proys.empty:
@@ -664,7 +658,7 @@ else:
 if seccion == "📌 1. Información General y Factibilidad":
   st.header("📌 Información General del Proyecto y Factibilidades")
 
-  with st.expander("➕ Registrar Nuevo Proyecto / Obra", expanded=False):
+  with st.expander("➕ Registrar Nuevo Proyecto / Obra", expanded=True):
     col_p1, col_p2 = st.columns(2)
     with col_p1:
       cliente = st.text_input("Nombre / Razón Social del Cliente:")
@@ -816,16 +810,13 @@ elif seccion == "🏢 2. Levantamiento por Recintos (ITO)":
     recinto_sel = st.selectbox("📌 Seleccionar Recinto:", LISTA_RECINTOS)
     st.info(f"Inspeccionando: **{recinto_sel}**")
 
-    # Mantenimiento del state local
     if recinto_sel not in st.session_state["levantamiento"]:
       st.session_state["levantamiento"][recinto_sel] = {}
 
     partidas_activas = st.multiselect(
         "🛠️ Activar Partidas para este Recinto:",
         LISTA_PARTIDAS,
-        default=list(
-            st.session_state["levantamiento"][recinto_sel].keys()
-        ),
+        default=list(st.session_state["levantamiento"][recinto_sel].keys()),
     )
 
   with col_r2:
@@ -848,7 +839,6 @@ elif seccion == "🏢 2. Levantamiento por Recintos (ITO)":
         )
         p_params["m2"] = m2_p
 
-        # SISTEMA CONSTRUCTIVO EN ESTRUCTURAS
         if p == "Estructura":
           sis = st.selectbox(
               f"Sistema Constructivo para Estructura en {recinto_sel}:",
@@ -898,10 +888,8 @@ elif seccion == "🏢 2. Levantamiento por Recintos (ITO)":
             "Lavandería",
         ]
 
-        # Guardar en estado global
         st.session_state["levantamiento"][recinto_sel][p] = p_params
 
-        # Muestra de Materiales y Dependencias Automáticas
         mats_dep = TechnicalLibraryEngine.obtener_materiales_con_dependencias(
             p, p_params
         )
@@ -919,7 +907,7 @@ elif seccion == "🔍 3. Auditoría y Revisión Técnica Final":
   st.header("🔍 Auditoría Técnica e Inspección Cruzada Pre-Cotización")
   st.write(
       "El sistema analiza automáticamente inconsistencias normativas (OGUC /"
-      " SEC) yOmisiones antes de generar la documentación final."
+      " SEC) y Omisiones antes de generar la documentación final."
   )
 
   fact_row = obtener_factibilidad(proy_id_activo) if proy_id_activo else None
@@ -1067,7 +1055,6 @@ elif seccion == "💵 6. Cotización Comercial y Versionado":
   with col_v3:
     inc_iva = st.checkbox("Incluir IVA (19%)", value=True)
 
-  # Cálculos
   monto_gg = cd_base * (pct_gg / 100.0)
   subtotal_neto = cd_base + monto_gg
   monto_iva = subtotal_neto * 0.19 if inc_iva else 0.0
