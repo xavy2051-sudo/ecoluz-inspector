@@ -22,8 +22,8 @@ st.set_page_config(
 
 st.title("🏗️ ECOLUZ - Cerebro Inspector Técnico & Listado de Ejecución")
 st.markdown(
-    "Control Interno de Costos (APU), Cubicaciones con Merma y Propuestas"
-    " Comerciales"
+    "Control Interno de Costos (APU), Cubicaciones con Merma, Techumbres,"
+    " Barreras Hidrófugas y Presupuestos Dinámicos"
 )
 
 
@@ -32,7 +32,6 @@ st.markdown(
 # -----------------------------------------------------------------------------
 
 
-# --- 1. EXCEL Y PDF PARA EL CLIENTE (MÓDULO 5) ---
 def generar_excel_presupuesto(df_items, c_directo, gg_util, subtotal, iva, total):
   output = io.BytesIO()
   with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -214,7 +213,6 @@ def generar_pdf_presupuesto(df_items, c_directo, gg_util, subtotal, iva, total):
   return buffer.getvalue()
 
 
-# --- 2. EXCEL Y PDF PARA CONTROL INTERNO / APU (MÓDULO 4) ---
 def generar_excel_apu(df_apu):
   output = io.BytesIO()
   with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -353,6 +351,10 @@ lista_recintos_especialidades = [
         "🧱 Módulo Completo Metalcom (OSB + Metalsiding + Internit + Cerámicos +"
         " Pintura)"
     ),
+    (
+        "🏠 Techumbre y Cubiertas Completa (Cerchas + OSB Techo + Fieltro/Membrana"
+        " + Cubierta + Hojalatería)"
+    ),
     "⚡ Electricidad",
     "🎨 Pintura y Cielos",
     "🪵 Carpintería",
@@ -364,7 +366,7 @@ lista_recintos_especialidades = [
 
 
 # -----------------------------------------------------------------------------
-# MÓDULO 1: CONFIGURACIÓN
+# MÓDULO 1: CONFIGURACIÓN Y SELECCIÓN DE MATERIALES
 # -----------------------------------------------------------------------------
 if modulo == "1. Configuración Técnica y Cubicaciones":
   st.subheader(
@@ -404,6 +406,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
   nuevos_items = []
   datos_et = {}
 
+  # --- OPCIÓN 1: MÓDULO COMPLETO METALCOM ---
   if "Módulo Completo Metalcom" in recinto_actual:
     with st.expander(
         "🏗️ Parámetros de la Solución Constructiva Multicapa", expanded=True
@@ -411,6 +414,13 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
       espesor_osb = st.selectbox(
           "Placa Estructural Exterior:",
           ["OSB 11.1 mm", "OSB 9.5 mm", "Terciado Estructural 12 mm"],
+      )
+      tipo_barrera = st.selectbox(
+          "Barrera de Humedad Exterior Muros:",
+          [
+              "Fieltro Asfáltico 15 lb (Económico)",
+              "Membrana Hidrófuga Respirable (Tipo Tyvek / Dorken)",
+          ],
       )
       tipo_insul = st.selectbox(
           "Aislación Térmica / Acústica Interior:",
@@ -431,7 +441,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
       tipo_pegamento = st.selectbox(
           "Adhesivo para Cerámicos:",
           [
-              "Bekron Flex (Porcelanato/Sustrito Flexible)",
+              "Bekron Flex (Porcelanato/Sustrato Flexible)",
               "Bekron ACI (Sustrato Rígido/Exterior)",
               "Bekron AC (Estd.)",
           ],
@@ -447,7 +457,7 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
 
     datos_et = {
         "Estructura": "Perfiles Metalcom C90x0.85 y U90x0.85",
-        "Exterior": f"{espesor_osb} + Barrera Humedad + Metalsiding",
+        "Exterior": f"{espesor_osb} + {tipo_barrera} + Metalsiding",
         "Aislación": tipo_insul,
         "Interior Muros": f"{tipo_internit} + Cerámico",
         "Piso": "Cerámico Antideslizante + Adhesivo",
@@ -470,6 +480,17 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
       sacos_pegamento = round((area_muros + area_piso) / 3.5, 1)
       kg_frague = round((area_muros + area_piso) * 0.40, 1)
       tinetas_pintura_cielo = max(1.0, round(area_piso / 35.0, 1))
+
+      if "Fieltro" in tipo_barrera:
+        partida_barrera = "Fieltro Asfáltico 15 lb para Muros (rollo 40m²)"
+        cant_barrera = max(1.0, round(area_muros / 38.0, 1))
+        precio_barrera = 18500.0
+      else:
+        partida_barrera = (
+            "Membrana Hidrófuga Respirable Muros (rollo 50m² - Tyvek/Dorken)"
+        )
+        cant_barrera = max(1.0, round(area_muros / 48.0, 1))
+        precio_barrera = 48000.0
 
       nuevos_items = [
           {
@@ -494,12 +515,9 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
               "Precio Unit.": 12800.0,
           },
           {
-              "Partida": (
-                  "Fieltro Asfáltico 15 lb / Membrana Barrera Humedad (rollo"
-                  " 40m²)"
-              ),
-              "Cantidad": max(1.0, round(area_muros / 38.0, 1)),
-              "Precio Unit.": 18500.0,
+              "Partida": partida_barrera,
+              "Cantidad": cant_barrera,
+              "Precio Unit.": precio_barrera,
           },
           {
               "Partida": (
@@ -561,6 +579,162 @@ if modulo == "1. Configuración Técnica y Cubicaciones":
               "Precio Unit.": 26000.0,
           },
       ]
+
+  # --- OPCIÓN 2: TECHUMBRE Y CUBIERTAS COMPLETA ---
+  elif "Techumbre y Cubiertas" in recinto_actual:
+    with st.expander(
+        "🏠 Parámetros Técnicos de Techumbre y Cubierta", expanded=True
+    ):
+      pendiente_pct = st.slider("Pendiente del Techo (%):", 15, 60, 30)
+      espesor_osb_techo = st.selectbox(
+          "Base Estructural Techo (OSB / Terciado):",
+          [
+              "OSB Estructural Techo 11.1 mm",
+              "OSB Estructural Techo 15.0 mm",
+              "Terciado Estructural 12 mm",
+          ],
+      )
+      barrera_techo = st.selectbox(
+          "Barrera de Humedad e Impermeabilización Techo:",
+          [
+              "Fieltro Asfáltico 15 lb Techo",
+              "Fieltro Asfáltico 30 lb Techo (Reforzado)",
+              "Membrana Hidrófuga Respirable de Techo (Especial Techo)",
+          ],
+      )
+      tipo_cubierta = st.selectbox(
+          "Cubierta Final de Techo:",
+          [
+              "Teja Asfáltica Hexagonal / Arquitectónica (m²)",
+              "Plancha Zinc-Alum 0.40mm Onda Toledana / 5V (m²)",
+              "Plancha Zinc-Alum 0.35mm Estándar (m²)",
+              "Teja Gravillada Metálica (m²)",
+          ],
+      )
+      hojalateria_incluida = st.checkbox(
+          "Incluir Hojalatería (Caballete Cumbrera, Limahoyas, Forros y"
+          " Bajadas PVC)",
+          value=True,
+      )
+
+    # Cálculo de superficie real con pendiente
+    factor_pendiente = math.sqrt(1 + (pendiente_pct / 100.0) ** 2)
+    area_techo_real = area_piso * factor_pendiente
+
+    datos_et = {
+        "Estructura Techo": "Cerchas y Costaneras Metalcom / Omegas",
+        "Base Placa": espesor_osb_techo,
+        "Aislante/Barrera": barrera_techo,
+        "Cubierta": tipo_cubierta,
+        "Aguas Lluvias": (
+            "Canaletas PVC / Zinc + Bajadas + Caballetes Cumbrera"
+            if hojalateria_incluida
+            else "Sin Hojalatería"
+        ),
+        "Pendiente": f"{pendiente_pct}%",
+        "Normativa": "OGUC Art 5.5.3 / NCh 1071",
+    }
+
+    if st.button("➕ Generar Partidas de Techumbre"):
+      planchas_osb_t = round((area_techo_real / 2.976) * 1.10, 1)
+
+      if "15 lb" in barrera_techo:
+        cant_barrera_t = max(1.0, round(area_techo_real / 38.0, 1))
+        p_barrera_t = 18500.0
+      elif "30 lb" in barrera_techo:
+        cant_barrera_t = max(1.0, round(area_techo_real / 18.0, 1))
+        p_barrera_t = 24500.0
+      else:
+        cant_barrera_t = max(1.0, round(area_techo_real / 48.0, 1))
+        p_barrera_t = 52000.0
+
+      if "Teja Asfáltica" in tipo_cubierta:
+        pu_cub = 16800.0
+      elif "0.40mm" in tipo_cubierta:
+        pu_cub = 13500.0
+      elif "0.35mm" in tipo_cubierta:
+        pu_cub = 10500.0
+      else:
+        pu_cub = 22000.0
+
+      nuevos_items = [
+          {
+              "Partida": (
+                  "Estructura de Cerchas, Costaneras Omegas y Frontones (m²"
+                  " proyección)"
+              ),
+              "Cantidad": round(area_techo_real, 2),
+              "Precio Unit.": 16500.0,
+          },
+          {
+              "Partida": (
+                  f"Placa Base {espesor_osb_techo} 1.22x2.44m (planchas)"
+              ),
+              "Cantidad": planchas_osb_t,
+              "Precio Unit.": 13500.0,
+          },
+          {
+              "Partida": f"{barrera_techo} (rollos)",
+              "Cantidad": cant_barrera_t,
+              "Precio Unit.": p_barrera_t,
+          },
+          {
+              "Partida": f"Cubierta {tipo_cubierta}",
+              "Cantidad": round(area_techo_real * 1.08, 2),
+              "Precio Unit.": pu_cub,
+          },
+          {
+              "Partida": (
+                  "Tornillos Autoperforantes con Golilla Neopreno Hexagonal 2\""
+                  " (caja 250 un)"
+              ),
+              "Cantidad": max(1.0, round(area_techo_real / 25.0, 1)),
+              "Precio Unit.": 11800.0,
+          },
+          {
+              "Partida": (
+                  "Aislación Lana de Vidrio / Roca R188 para Entrepiso/Techo"
+                  " (m²)"
+              ),
+              "Cantidad": round(area_piso * 1.05, 2),
+              "Precio Unit.": 4800.0,
+          },
+      ]
+
+      if hojalateria_incluida:
+        nuevos_items.extend([
+            {
+                "Partida": (
+                    "Caballete Cumbrera Zinc / Asfáltico con Desarrollo 33cm"
+                    " (mL)"
+                ),
+                "Cantidad": round(largo, 2),
+                "Precio Unit.": 8500.0,
+            },
+            {
+                "Partida": (
+                    "Canaletas de Agua Lluvia PVC / Zinc Desarrollo 33cm (mL)"
+                ),
+                "Cantidad": round(perimetro, 2),
+                "Precio Unit.": 9200.0,
+            },
+            {
+                "Partida": (
+                    "Bajadas de Agua Lluvia PVC 75mm / Zinc con Abrazaderas"
+                    " (mL)"
+                ),
+                "Cantidad": round(alto * 2, 2),
+                "Precio Unit.": 7800.0,
+            },
+            {
+                "Partida": (
+                    "Sellante Hojalatería Poliuretano / Masilla Asfáltica (un)"
+                ),
+                "Cantidad": 2.0,
+                "Precio Unit.": 6900.0,
+            },
+        ])
+
   else:
     if st.button("➕ Generar Materiales e Integrar a la Cotización"):
       nuevos_items = [{
@@ -664,17 +838,26 @@ elif modulo == "3. Especificaciones Técnicas Detalladas (E.T.)":
     )
 
 # -----------------------------------------------------------------------------
-# MÓDULO 4: APU Y CONTROL INTERNO DE COMPRAS
+# MÓDULO 4: APU Y AJUSTE DE PRECIOS EN TIEMPO REAL
 # -----------------------------------------------------------------------------
 elif modulo == "4. Análisis de Precios Unitarios (APU)":
   st.subheader(
-      "🛒 Módulo 4: Listado de Compras Reales (Editable + Exportable Excel/PDF)"
+      "🛒 Módulo 4: Listado de Compras y APU (Ajuste de Precios Editable +"
+      " Exportación)"
   )
   st.info(
-      "💡 Vista de control interno. Puedes editar cualquier celda (precios,"
-      " mermas, cantidades) haciendo doble clic en la tabla. Luego descarga el"
-      " informe en Excel o PDF."
+      "💡 Puedes modificar individualmente cada celda de precio/costo o bien"
+      " usar el selector superior de **Ajuste Global (%)** para simular"
+      " imprevistos o reajuste de precios de mercado."
   )
+
+  col_a1, col_a2 = st.columns([1, 2])
+  with col_a1:
+    ajuste_global_apu = st.number_input(
+        "Ajuste Global de Precios (%):", value=0.0, step=1.0
+    )
+
+  factor_ajuste = 1.0 + (ajuste_global_apu / 100.0)
 
   lista_compras = []
 
@@ -682,38 +865,58 @@ elif modulo == "4. Análisis de Precios Unitarios (APU)":
     for item in items:
       nombre = item["Partida"]
       cant_neta = float(item["Cantidad"])
-      precio_total_unit = float(item["Precio Unit."])
+      precio_total_unit = float(item["Precio Unit."]) * factor_ajuste
 
-      if "Metalcom" in nombre or "Perfil" in nombre:
-        merma_pct = 8
-        unidad_comercial = "Tiras de 6m"
+      if "Metalcom" in nombre or "Perfil" in nombre or "Cerchas" in nombre:
+        unidad_comercial = "Tiras de 6m / Perfiles"
         cant_comercial = math.ceil((cant_neta * 1.08) / 6.0)
-        pu_mat = 13800.0
-        pu_mo = 6000.0
+        pu_mat = 13800.0 * factor_ajuste
+        pu_mo = 6000.0 * factor_ajuste
 
-      elif "Placa" in nombre or "Internit" in nombre or "Yeso" in nombre:
-        merma_pct = 10
-        unidad_comercial = "Planchas (1.22x2.44m)"
-        cant_comercial = math.ceil((cant_neta * 1.10) / 2.976)
+      elif (
+          "Placa" in nombre
+          or "Internit" in nombre
+          or "Yeso" in nombre
+          or "Membrana" in nombre
+          or "Fieltro" in nombre
+          or "OSB" in nombre
+      ):
+        unidad_comercial = "Planchas / Rollos"
+        cant_comercial = math.ceil(cant_neta * 1.10)
         pu_mat = round(precio_total_unit * 0.70)
         pu_mo = round(precio_total_unit * 0.30)
 
+      elif (
+          "Teja" in nombre or "Zinc" in nombre or "Cubierta" in nombre
+      ):
+        unidad_comercial = "m² / Planchas / Paquetes"
+        cant_comercial = math.ceil(cant_neta * 1.08)
+        pu_mat = round(precio_total_unit * 0.65)
+        pu_mo = round(precio_total_unit * 0.35)
+
+      elif (
+          "Canaleta" in nombre
+          or "Bajada" in nombre
+          or "Caballete" in nombre
+      ):
+        unidad_comercial = "Tiras 3m / Metros Líneales"
+        cant_comercial = math.ceil(cant_neta * 1.05)
+        pu_mat = round(precio_total_unit * 0.60)
+        pu_mo = round(precio_total_unit * 0.40)
+
       elif "Cerámico" in nombre or "Revestimiento" in nombre:
-        merma_pct = 10
-        unidad_comercial = "m² (Cajas cerradas)"
+        unidad_comercial = "m² (Cajas)"
         cant_comercial = math.ceil(cant_neta * 1.10)
         pu_mat = round(precio_total_unit * 0.55)
         pu_mo = round(precio_total_unit * 0.45)
 
       elif "Adhesivo" in nombre or "Bekron" in nombre:
-        merma_pct = 5
         unidad_comercial = "Sacos 25 kg"
         cant_comercial = math.ceil(cant_neta * 1.05)
         pu_mat = precio_total_unit
         pu_mo = 0.0
 
       else:
-        merma_pct = 5
         unidad_comercial = "Unidades / Global"
         cant_comercial = math.ceil(cant_neta * 1.05)
         pu_mat = round(precio_total_unit * 0.60)
@@ -735,10 +938,9 @@ elif modulo == "4. Análisis de Precios Unitarios (APU)":
   if lista_compras:
     df_base_apu = pd.DataFrame(lista_compras)
 
-    # TABLA INTERACTIVA EDITABLE (Muestra ícono de edición al pasar el mouse)
     st.markdown(
-        "### ✏️ Tabla de Control Interno (Haz doble clic en cualquier número"
-        " para editar)"
+        "### ✏️ Tabla APU Interactiva (Edita directamente cualquier valor de la"
+        " celda)"
     )
     df_apu_editado = st.data_editor(
         df_base_apu,
@@ -747,7 +949,6 @@ elif modulo == "4. Análisis de Precios Unitarios (APU)":
         key="editor_apu_modulo4",
     )
 
-    # Recalcular totales con los valores editados
     df_apu_editado["Total Material ($)"] = (
         df_apu_editado["Cantidad a Comprar"] * df_apu_editado["Costo Mat. Un. ($)"]
     )
@@ -791,20 +992,26 @@ elif modulo == "4. Análisis de Precios Unitarios (APU)":
     )
 
 # -----------------------------------------------------------------------------
-# MÓDULO 5: CIERRE ECONÓMICO Y COTIZACIÓN PARA EL CLIENTE
+# MÓDULO 5: CIERRE ECONÓMICO Y AJUSTE DE COTIZACIÓN AL CLIENTE
 # -----------------------------------------------------------------------------
 elif modulo == "5. Cierre Económico y Presupuesto":
-  st.subheader(
-      "📊 Módulo 5: Propuesta Comercial para Entrega al Cliente (Editable +"
-      " Exportable Excel/PDF)"
-  )
+  st.subheader("📊 Módulo 5: Propuesta Comercial para Entrega al Cliente")
+
+  col_c1, col_c2 = st.columns([1, 2])
+  with col_c1:
+    ajuste_global_cli = st.number_input(
+        "Ajuste / Descuento Global Cliente (%):", value=0.0, step=1.0
+    )
+
+  factor_cli = 1.0 + (ajuste_global_cli / 100.0)
 
   todos = []
   for rec, items in st.session_state["partidas_recintos"].items():
     for item in items:
       f = dict(item).copy()
       f["Especialidad / Recinto"] = rec
-      f["Costo Total"] = float(f["Cantidad"]) * float(f["Precio Unit."])
+      f["Precio Unit."] = float(f["Precio Unit."]) * factor_cli
+      f["Costo Total"] = float(f["Cantidad"]) * f["Precio Unit."]
       todos.append(f)
 
   if todos:
@@ -826,11 +1033,10 @@ elif modulo == "5. Cierre Económico y Presupuesto":
     ]
 
     st.markdown(
-        "### ✏️ Vista Previa Comercial (Haz doble clic en cualquier precio o"
-        " cantidad para ajustarlo)"
+        "### ✏️ Cotización Cliente Editable (Modifica precios o cantidades"
+        " libremente)"
     )
 
-    # TABLA EDITABLE CLIENTE
     df_cliente_editado = st.data_editor(
         df_cliente,
         num_rows="dynamic",
@@ -838,7 +1044,6 @@ elif modulo == "5. Cierre Económico y Presupuesto":
         key="editor_cliente_modulo5",
     )
 
-    # Recalcular Total Parcial
     df_cliente_editado["Total Parcial ($)"] = (
         df_cliente_editado["Cantidad"] * df_cliente_editado["Precio Unit. ($)"]
     )
