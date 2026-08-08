@@ -10,11 +10,10 @@ import streamlit as st
 
 # Importación de la Biblioteca Técnica Desacoplada
 from biblioteca_tecnica import (
-    BIBLIOTECA_TECNICA,
-    render_formulario_dinamico,
-    calcular_materiales_partida,
+    obtener_configuracion_partida,
+    calcular_cubicacion_y_apu,
+    inicializar_fase1_db,
 )
-
 st.set_page_config(page_title="ECOLUZ - Inspector Técnico", layout="wide")
 
 # ------------------------------------------------------------------------------
