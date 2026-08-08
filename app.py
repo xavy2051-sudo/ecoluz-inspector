@@ -14,7 +14,11 @@ from biblioteca_tecnica import (
     calcular_cubicacion_y_apu,
     inicializar_fase1_db,
 )
+
 st.set_page_config(page_title="ECOLUZ - Inspector Técnico", layout="wide")
+
+# Inicialización de tablas relacionales de la Biblioteca Técnica
+inicializar_fase1_db()
 
 # ------------------------------------------------------------------------------
 # BASE DE DATOS Y CONEXIÓN
@@ -29,38 +33,17 @@ def get_connection():
 
 
 def init_db():
-  """Inicializa y migra automáticamente la tabla para soportar datos JSON dinámicos."""
   conn = get_connection()
   c = conn.cursor()
-
-  # Crear tabla base si no existe
   c.execute("""
-        CREATE TABLE IF NOT EXISTS recintos_levantamiento (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            proyecto_id TEXT,
-            nombre_recinto TEXT,
-            elemento_constructivo TEXT,
-            estado_diagnostico TEXT,
-            patologia_observada TEXT,
-            datos_tecnicos_json TEXT,
-            observaciones_ito TEXT,
-            puntos_enchufes INTEGER DEFAULT 0,
-            centros_iluminacion INTEGER DEFAULT 0,
-            interruptores INTEGER DEFAULT 0,
-            puntos_fuerza_clima INTEGER DEFAULT 0,
-            estado_canalizacion TEXT DEFAULT ''
+        CREATE TABLE IF NOT EXISTS proyectos (
+            id TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            mandante TEXT,
+            direccion TEXT,
+            fecha TEXT
         )
     """)
-
-  # Verificar si la columna datos_tecnicos_json existe (Migración automática)
-  c.execute("PRAGMA table_info(recintos_levantamiento)")
-  columns = [row["name"] for row in c.fetchall()]
-  if "datos_tecnicos_json" not in columns:
-    c.execute(
-        "ALTER TABLE recintos_levantamiento ADD COLUMN datos_tecnicos_json"
-        " TEXT"
-    )
-
   conn.commit()
   conn.close()
 
@@ -68,12 +51,28 @@ def init_db():
 init_db()
 
 # ------------------------------------------------------------------------------
-# PANEL LATERAL
+# SIDEBAR - NAVEGACIÓN
 # ------------------------------------------------------------------------------
 st.sidebar.title("📌 Proyecto en Inspección")
-proy_id = st.sidebar.selectbox("Seleccionar Proyecto Activo:", ["ID 1 - miguel"])
 
-menu_opcion = st.sidebar.radio(
+conn = get_connection()
+proyectos_df = pd.read_sql_query("SELECT id, nombre FROM proyectos", conn)
+conn.close()
+
+proyectos_options = {"N/A": "Sin Proyectos"}
+if not proyectos_df.empty:
+  proyectos_options = {
+      f"ID {row['id']} - {row['nombre']}": row["id"]
+      for _, row in proyectos_df.iterrows()
+  }
+
+proyecto_seleccionado = st.sidebar.selectbox(
+    "Seleccionar Proyecto Activo:", list(proyectos_options.keys())
+)
+proyecto_id_activo = proyectos_options[proyecto_seleccionado]
+
+st.sidebar.markdown("---")
+modulo = st.sidebar.radio(
     "Flujo del Inspector Técnico",
     [
         "📌 1. Información General",
@@ -85,231 +84,170 @@ menu_opcion = st.sidebar.radio(
 )
 
 # ------------------------------------------------------------------------------
-# MÓDULO 2: INSPECCIÓN EN TERRENO (ARQUITECTURA DINÁMICA)
+# MÓDULO 1: INFORMACIÓN GENERAL
 # ------------------------------------------------------------------------------
-if "📊 2. Inspección en Terreno" in menu_opcion:
-  st.title("📊 Inspección Espacial: Recintos, Elementos y Materiales")
+if modulo == "📌 1. Información General":
+  st.header("📌 Gestión de Proyectos")
+  with st.form("form_proyecto"):
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+      p_id = st.text_input("Código / ID Proyecto:", "PRJ-001")
+      p_nombre = st.text_input("Nombre del Proyecto:", "Remodelación de Baño")
+    with col_p2:
+      p_mandante = st.text_input("Cliente / Mandante:", "Constructora Ejemplo")
+      p_direccion = st.text_input("Dirección de la Obra:", "Av. Principal 123")
 
-  if not proy_id:
-    st.warning("⚠️ Selecciona un proyecto activo en el panel lateral.")
-  else:
-    tab_ingreso_rec, tab_resumen_cub, tab_desglose_mat = st.tabs([
-        "📝 Levantamiento Diagnóstico por Recinto",
-        "📋 Resumen Consolidado de Levantamientos",
-        "📦 Cubicación Detallada de Materiales (APU)",
-    ])
-
-    conn = get_connection()
-
-    # TAB 1: FORMULARIO DINÁMICO
-    with tab_ingreso_rec:
-      st.subheader(
-          "📍 Diagnóstico de Elementos Constructivos y Prescripción Técnica"
-      )
-
-      # Selección previa fuera del form para refrescar dinámicamente el lado derecho
-      c_top1, c_top2 = st.columns(2)
-      with c_top1:
-        nombre_rec = st.selectbox(
-            "Recinto / Espacio Físico:",
-            [
-                "Baño Principal (Zona Húmeda)",
-                "Cocina (Zona Húmeda)",
-                "Baño Visitas",
-                "Estar / Comedor",
-                "Dormitorio Principal",
-                "Dormitorio 2",
-                "Pasillo / Acceso",
-                "Exterior / Fachada",
-                "Logia / Lavadero",
-            ],
-        )
-
-      with c_top2:
-        elem_constructivo = st.selectbox(
-            "Elemento Constructivo Evaluado:",
-            list(BIBLIOTECA_TECNICA.keys()),
-        )
-
-      st.divider()
-
-      with st.form("form_recinto_dinamico"):
-        cr1, cr2 = st.columns(2)
-
-        with cr1:
-          st.markdown("#### 🔍 Estado Diagnóstico ITO")
-          diag_estado = st.selectbox(
-              "Diagnóstico ITO / Estado Actual:",
-              [
-                  "Sin Instalación / Obra Gruesa",
-                  "Conforme / Normalizado",
-                  "No Conforme (Requiere Intervención/Cambio)",
-                  "Deterioro por Humedad / Desprendimiento",
-                  "Instalación Incompleta",
-              ],
-          )
-
-          patologia_txt = st.text_input(
-              "Descripción de la Patología o Deficiencia Observada:",
-              placeholder=(
-                  "Ej: Muros sin placa RH o canalizaciones eléctricas expuestas."
-              ),
-          )
-
-          obs_ito = st.text_area(
-              "Observaciones y Prescripción Técnica del ITO:"
-          )
-
-        with cr2:
-          # RENDERIZADO DINÁMICO BASADO EN LA BIBLIOTECA TÉCNICA
-          respuestas_dinamicas = render_formulario_dinamico(elem_constructivo)
-
-        submit_btn = st.form_submit_button(
-            "➕ Registrar Inspección de Recinto"
-        )
-
-        if submit_btn:
-          # Precondición y preparación de datos JSON
-          json_data = json.dumps(respuestas_dinamicas, ensure_ascii=False)
-
-          # Mapeo de fallback para compatibilidad eléctrica antigua
-          num_enchufes = int(respuestas_dinamicas.get("num_enchufes", 0))
-          num_centros = int(respuestas_dinamicas.get("num_centros", 0))
-          num_interruptores = int(
-              respuestas_dinamicas.get("num_interruptores", 0)
-          )
-          num_fuerza = int(respuestas_dinamicas.get("num_fuerza", 0))
-          est_canal = str(
-              respuestas_dinamicas.get("tipo_canalizacion", elem_constructivo)
-          )
-
-          c = conn.cursor()
-          c.execute(
-              """
-                        INSERT INTO recintos_levantamiento 
-                        (proyecto_id, nombre_recinto, elemento_constructivo, estado_diagnostico, patologia_observada,
-                         datos_tecnicos_json, observaciones_ito, puntos_enchufes, centros_iluminacion, interruptores, puntos_fuerza_clima, estado_canalizacion)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-              (
-                  proy_id,
-                  nombre_rec,
-                  elem_constructivo,
-                  diag_estado,
-                  patologia_txt,
-                  json_data,
-                  obs_ito,
-                  num_enchufes,
-                  num_centros,
-                  num_interruptores,
-                  num_fuerza,
-                  est_canal,
-              ),
-          )
-          conn.commit()
-          st.success(
-              f"✅ Se registró **{elem_constructivo}** en **{nombre_rec}**"
-              " exitosamente."
-          )
-          st.rerun()
-
-    # TAB 2: RESUMEN CONSOLIDADO DE LEVANTAMIENTOS
-    with tab_resumen_cub:
-      st.subheader("📋 Registros de Inspección por Recinto")
-      df_recintos = pd.read_sql_query(
-          """
-                SELECT id, nombre_recinto AS [Recinto], elemento_constructivo AS [Elemento], 
-                       estado_diagnostico AS [Estado Diagnóstico], patologia_observada AS [Patología],
-                       datos_tecnicos_json AS [Parametros_JSON], observaciones_ito AS [Observación ITO]
-                FROM recintos_levantamiento WHERE proyecto_id = ?
-            """,
-          conn,
-          params=(proy_id,),
-      )
-
-      if df_recintos.empty:
-        st.info("ℹ️ No hay registros guardados para este proyecto.")
-      else:
-        st.dataframe(
-            df_recintos.drop(columns=["Parametros_JSON"]),
-            use_container_width=True,
-            hide_index=True,
-        )
-
-        with st.expander("🗑️ Eliminar Registro de Recinto"):
-          rec_del = st.selectbox(
-              "Selecciona el registro a borrar:",
-              options=df_recintos["id"].tolist(),
-              format_func=lambda x: (
-                  f"ID {x} - "
-                  f"{df_recintos[df_recintos['id']==x]['Recinto'].values[0]} ("
-                  f"{df_recintos[df_recintos['id']==x]['Elemento'].values[0]})"
-              ),
-          )
-          if st.button("Confirmar Eliminación"):
-            conn.execute(
-                "DELETE FROM recintos_levantamiento WHERE id = ?", (rec_del,)
-            )
-            conn.commit()
-            st.rerun()
-
-    # TAB 3: CUBICACIÓN DETALLADA Y LISTA DE MATERIALES PARA APU
-    with tab_desglose_mat:
-      st.subheader(
-          "📦 Cubicación Consolidada de Materiales por Partida Evaluada"
-      )
-
+    submit_p = st.form_submit_button("Guardar Proyecto")
+    if submit_p:
+      conn = get_connection()
       c = conn.cursor()
       c.execute(
-          """
-                SELECT id, nombre_recinto, elemento_constructivo, datos_tecnicos_json 
-                FROM recintos_levantamiento WHERE proyecto_id = ?
-            """,
-          (proy_id,),
+          "INSERT OR REPLACE INTO proyectos VALUES (?, ?, ?, ?, DATE('now'))",
+          (p_id, p_nombre, p_mandante, p_direccion),
       )
-      filas = c.fetchall()
+      conn.commit()
+      conn.close()
+      st.success(f"Proyecto '{p_nombre}' registrado exitosamente.")
+      st.rerun()
 
-      if not filas:
-        st.info("ℹ️ No existen materiales para calcular aún.")
-      else:
-        todos_materiales = []
+# ------------------------------------------------------------------------------
+# MÓDULO 2: INSPECCIÓN EN TERRENO Y FORMULARIO DINÁMICO
+# ------------------------------------------------------------------------------
+elif modulo == "📊 2. Inspección en Terreno (Recintos y Patologías)":
+  st.header("📊 Levantamiento en Terreno")
 
-        for f in filas:
-          rec = f["nombre_recinto"]
-          elem = f["elemento_constructivo"]
-          raw_json = f["datos_tecnicos_json"]
+  cr1, cr2 = st.columns([1, 1])
 
-          if raw_json:
-            try:
-              respuestas_dict = json.loads(raw_json)
-            except Exception:
-              respuestas_dict = {}
-          else:
-            respuestas_dict = {}
+  with cr1:
+    st.subheader("1. Ubicación y Partida")
+    recinto = st.selectbox(
+        "Recinto Evaluado:",
+        [
+            "Baño Principal",
+            "Baño Visitas",
+            "Cocina",
+            "Dormitorio 1",
+            "Living / Comedor",
+        ],
+    )
 
-          # Cálculo automático utilizando la Biblioteca Técnica
-          mat_calculados = calcular_materiales_partida(elem, respuestas_dict)
+    partida_nombre = st.selectbox(
+        "Elemento Constructivo / Partida:",
+        [
+            "Tabiquería / Muros",
+            "Piso / Revestimiento Ceramicado",
+            "Electricidad - Enchufes",
+        ],
+    )
 
-          for m in mat_calculados:
-            todos_materiales.append({
-                "Recinto": rec,
-                "Partida": elem,
-                "Insumo / Material": m["insumo"],
-                "Cantidad Cúbica": m["cantidad"],
-                "Unidad": m["unidad"],
-            })
+    diagnostico = st.selectbox(
+        "Diagnóstico ITO:", ["Conforme", "No Conforme", "Requiere Intervención"]
+    )
+    patologia = st.text_input(
+        "Patología Observada / Comentario:", "Sin observaciones"
+    )
 
-        if todos_materiales:
-          df_mat = pd.DataFrame(todos_materiales)
-          st.dataframe(df_mat, use_container_width=True, hide_index=True)
+  config_partida = obtener_configuracion_partida(partida_nombre)
+  respuestas_usuario = {}
 
-          # Exportación directa
-          csv_data = df_mat.to_csv(index=False).encode("utf-8")
-          st.download_button(
-              label="📥 Descargar Cubicación de Materiales (CSV)",
-              data=csv_data,
-              file_name=f"cubicacion_materiales_{proy_id}.csv",
-              mime="text/csv",
+  with cr2:
+    st.subheader(f"2. Parámetros Técnicos: {partida_nombre}")
+
+    if config_partida and config_partida["preguntas"]:
+      st.caption(f"Categoría: {config_partida['categoria']}")
+
+      for q in config_partida["preguntas"]:
+        campo_id = q["campo_id"]
+        label = q["etiqueta"]
+        tipo = q["tipo_input"]
+        val_def = q["valor_default"]
+
+        if tipo == "number":
+          val_float = float(val_def) if val_def else 0.0
+          respuestas_usuario[campo_id] = st.number_input(
+              label,
+              value=val_float,
+              step=q.get("step_val", 1.0),
+              help=q.get("help_text", ""),
+              key=f"dyn_{partida_nombre}_{campo_id}",
           )
+        elif tipo == "select":
+          opciones = q.get("opciones", [])
+          idx = opciones.index(val_def) if val_def in opciones else 0
+          respuestas_usuario[campo_id] = st.selectbox(
+              label,
+              opciones,
+              index=idx,
+              key=f"dyn_{partida_nombre}_{campo_id}",
+          )
+        else:
+          respuestas_usuario[campo_id] = st.text_input(
+              label, value=val_def, key=f"dyn_{partida_nombre}_{campo_id}"
+          )
+    else:
+      st.warning("No hay preguntas registradas para esta partida.")
 
+  st.markdown("---")
+
+  apu = {}
+  if respuestas_usuario:
+    resultado_calculo = calcular_cubicacion_y_apu(
+        partida_nombre, respuestas_usuario
+    )
+
+    st.subheader("💡 Resumen de Cubicación y Materiales Requeridos")
+    c_m1, c_m2 = st.columns([2, 1])
+
+    with c_m1:
+      mat_df = pd.DataFrame(resultado_calculo["materiales"])
+      st.table(mat_df)
+
+    with c_m2:
+      apu = resultado_calculo["apu"]
+      st.metric(
+          "Costo Directo Estimado", f"${apu.get('costo_directo_total_clp', 0):,} CLP"
+      )
+      st.caption(f"Materiales: ${apu.get('costo_materiales_clp', 0):,} CLP")
+      st.caption(
+          f"Mano de Obra: {apu.get('hh_mano_obra', 0)} HH ("
+          f"${apu.get('costo_mano_obra_clp', 0):,} CLP)"
+      )
+
+  if st.button("💾 Registrar Inspección"):
+    json_respuestas = json.dumps(respuestas_usuario, ensure_ascii=False)
+    conn = get_connection()
+    c = conn.cursor()
+    costo_txt = (
+        f"Costo Directo APU: ${apu.get('costo_directo_total_clp', 0):,} CLP"
+        if apu
+        else "Sin APU"
+    )
+    c.execute(
+        """
+            INSERT INTO recintos_levantamiento 
+            (proyecto_id, nombre_recinto, elemento_constructivo, estado_diagnostico, patologia_observada, datos_tecnicos_json, observaciones_ito)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            proyecto_id_activo,
+            recinto,
+            partida_nombre,
+            diagnostico,
+            patologia,
+            json_respuestas,
+            costo_txt,
+        ),
+    )
+    conn.commit()
     conn.close()
+    st.success(f"Inspección para '{partida_nombre}' guardada con éxito.")
+
+# ------------------------------------------------------------------------------
+# MÓDULOS EN DESARROLLO (3, 4 y 5)
+# ------------------------------------------------------------------------------
+else:
+  st.header(modulo)
+  st.info(
+      "Módulo activo y conectado a la base de datos relacional. Selecciona"
+      " 'Inspección en Terreno' para probar la dynamic UI del Baño."
+  )
