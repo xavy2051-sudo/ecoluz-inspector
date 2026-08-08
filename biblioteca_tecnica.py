@@ -1,485 +1,639 @@
 # biblioteca_tecnica.py
 # ==============================================================================
-# BIBLIOTECA TÉCNICA Y MOTOR DE CUBICACIÓN PARA ECOLUZ / ITO
+# CEREBRO CONSTRUCTIVO Y MOTOR DE CUBICACIÓN TÉCNICA - ECOLUZ ITO
 # ==============================================================================
 
+import json
 import math
-import streamlit as st
+import sqlite3
 
-BIBLIOTECA_TECNICA = {
-    "Tabiquería / Muros": {
-        "categoria": "Estructuras y Tabiquería",
-        "unidad_medida": "m²",
-        "preguntas": [
-            {
-                "id": "largo",
-                "label": "Largo del Tabique (m):",
-                "tipo": "number",
-                "default": 2.5,
-                "step": 0.1,
-                "help": "Longitud lineal del tabique.",
-            },
-            {
-                "id": "alto",
-                "label": "Alto / Altura Comercial (m):",
-                "tipo": "number",
-                "default": 2.4,
-                "step": 0.1,
-                "help": "Altura medida desde radier/piso hasta cielo.",
-            },
-            {
-                "id": "tipo_estructura",
-                "label": "Estructura Soporte:",
-                "tipo": "select",
-                "opciones": [
-                    "Metalcom Montantes/Soleras 60CA08 (Galvanizado)",
-                    "Metalcom Montantes/Soleras 90CA08",
-                    "Madera Pino 2x3 pulgadas",
-                    "Madera Pino 2x2 pulgadas",
-                ],
-                "default": "Metalcom Montantes/Soleras 60CA08 (Galvanizado)",
-            },
-            {
-                "id": "separacion_montantes",
-                "label": "Distancia entre Montantes / Pies Derechos:",
-                "tipo": "select",
-                "opciones": ["40 cm (Recomendado Zonas Húmedas)", "60 cm"],
-                "default": "40 cm (Recomendado Zonas Húmedas)",
-            },
-            {
-                "id": "tipo_placa",
-                "label": "Placa de Revestimiento Interior/Zona Húmeda:",
-                "tipo": "select",
-                "opciones": [
-                    "Volcanita RH 12.5mm (Resistente a Humedad - Verde)",
-                    "Volcanita ST 11mm (Estándar)",
-                    "Permanit Fibrocemento 6mm",
-                    "Glasroc X 12.5mm",
-                ],
-                "default": "Volcanita RH 12.5mm (Resistente a Humedad - Verde)",
-            },
-            {
-                "id": "aislacion",
-                "label": "Aislación Térmica / Acústica Interior:",
-                "tipo": "select",
-                "opciones": [
-                    "Lana de Vidrio Rollo 50mm",
-                    "Lana Mineral Panel 50mm",
-                    "Poliestireno Expandido (EPS) 50mm",
-                    "Sin Aislación",
-                ],
-                "default": "Lana de Vidrio Rollo 50mm",
-            },
-            {
-                "id": "impermeabilizacion",
-                "label": "Membrana / Impermeabilización de Zócalo:",
-                "tipo": "select",
-                "opciones": [
-                    "Membrana Elástica Acrílica + Banda de Refuerzo",
-                    "Barrera de Vapor Polietileno 0.1mm",
-                    "Sin Impermeabilización",
-                ],
-                "default": "Membrana Elástica Acrílica + Banda de Refuerzo",
-            },
-        ],
-    },
-    "Instalación Eléctrica General": {
-        "categoria": "Instalaciones Eléctricas",
-        "unidad_medida": "ptos",
-        "preguntas": [
-            {
-                "id": "num_enchufes",
-                "label": "Puntos de Enchufes (Doble/Simple 10A/16A):",
-                "tipo": "number",
-                "default": 2,
-                "step": 1,
-            },
-            {
-                "id": "num_centros",
-                "label": "Centros de Alumbrado (Cajas de Techo/Pared):",
-                "tipo": "number",
-                "default": 1,
-                "step": 1,
-            },
-            {
-                "id": "num_interruptores",
-                "label": "Interruptores (9/12, 9/15, 9/24):",
-                "tipo": "number",
-                "default": 1,
-                "step": 1,
-            },
-            {
-                "id": "num_fuerza",
-                "label": "Líneas Dedicadas / Fuerza / Clima (Cargas pesadas):",
-                "tipo": "number",
-                "default": 0,
-                "step": 1,
-            },
-            {
-                "id": "tipo_canalizacion",
-                "label": "Tipo de Canalización Predominante:",
-                "tipo": "select",
-                "opciones": [
-                    "Conduit Rígido PVC 20mm (RIC N°04)",
-                    "Tubería Flexible Conduit PVC 20mm",
-                    "Tubería EMT 3/4 en Superficie",
-                    "Cables en Moldura / Cintas libres de halógeno",
-                ],
-                "default": "Conduit Rígido PVC 20mm (RIC N°04)",
-            },
-            {
-                "id": "tipo_conductor",
-                "label": "Tipo de Conductor / Cableado:",
-                "tipo": "select",
-                "opciones": [
-                    "Cable EVA / H07Z1-K 2.5 mm² (Libre de Halógenos)",
-                    "Cable NYA 2.5 mm²",
-                    "Cable Libre de Halógenos 1.5 mm² (Alumbrado)",
-                ],
-                "default": "Cable EVA / H07Z1-K 2.5 mm² (Libre de Halógenos)",
-            },
-        ],
-    },
-    "Pisos / Revestimientos": {
-        "categoria": "Terminaciones de Piso",
-        "unidad_medida": "m²",
-        "preguntas": [
-            {
-                "id": "largo_piso",
-                "label": "Largo de Piso (m):",
-                "tipo": "number",
-                "default": 2.0,
-                "step": 0.1,
-            },
-            {
-                "id": "ancho_piso",
-                "label": "Ancho de Piso (m):",
-                "tipo": "number",
-                "default": 1.8,
-                "step": 0.1,
-            },
-            {
-                "id": "tipo_revestimiento",
-                "label": "Tipo de Revestimiento de Piso:",
-                "tipo": "select",
-                "opciones": [
-                    "Cerámica Antideslizante 33x33 / 45x45 cm",
-                    "Porcelanato 60x60 cm Zonas Húmedas",
-                    "Piso Vinílico SPC 4mm Impresionable",
-                ],
-                "default": "Cerámica Antideslizante 33x33 / 45x45 cm",
-            },
-            {
-                "id": "tipo_adhesivo",
-                "label": "Adhesivo / Bekron:",
-                "tipo": "select",
-                "opciones": [
-                    "Bekron AC (Pasta Alta Adherencia Zonas Húmedas)",
-                    "Bekron Standard (Polvo)",
-                    "Bekron DA (Porcelanatos)",
-                ],
-                "default": "Bekron AC (Pasta Alta Adherencia Zonas Húmedas)",
-            },
-        ],
-    },
-    "Cielo Falso / Aislación": {
-        "categoria": "Cielos y Cubiertas",
-        "unidad_medida": "m²",
-        "preguntas": [
-            {
-                "id": "largo_cielo",
-                "label": "Largo de Cielo (m):",
-                "tipo": "number",
-                "default": 2.0,
-                "step": 0.1,
-            },
-            {
-                "id": "ancho_cielo",
-                "label": "Ancho de Cielo (m):",
-                "tipo": "number",
-                "default": 1.8,
-                "step": 0.1,
-            },
-            {
-                "id": "tipo_placa_cielo",
-                "label": "Placa de Cielo Falso:",
-                "tipo": "select",
-                "opciones": [
-                    "Volcanita RH 12.5mm (Zonas Húmedas)",
-                    "Volcanita ST 10mm",
-                    "Cielo Americano Modular 60x60",
-                ],
-                "default": "Volcanita RH 12.5mm (Zonas Húmedas)",
-            },
-            {
-                "id": "aislacion_cielo",
-                "label": "Aislación sobre Cielo:",
-                "tipo": "select",
-                "opciones": [
-                    "Lana de Vidrio Rollo 80mm",
-                    "Lana Mineral 50mm",
-                    "Sin Aislación Extra",
-                ],
-                "default": "Lana de Vidrio Rollo 80mm",
-            },
-        ],
-    },
-}
+DB_FILE = "ecoluz_database.db"
 
 
-def render_formulario_dinamico(elemento_seleccionado):
-  """Renderiza dinámicamente en Streamlit las preguntas específicas para el elemento constructivo."""
-  config = BIBLIOTECA_TECNICA.get(
-      elemento_seleccionado, BIBLIOTECA_TECNICA["Instalación Eléctrica General"]
+def get_connection():
+  conn = sqlite3.connect(DB_FILE)
+  conn.row_factory = sqlite3.Row
+  return conn
+
+
+# ==============================================================================
+# 1. MIGRACIÓN NO DESTRUCTIVA Y CREACIÓN DE TABLAS MAESTRAS
+# ==============================================================================
+def inicializar_fase1_db():
+  """Crea las tablas relacionales para la Biblioteca Técnica sin destruir datos históricos."""
+  conn = get_connection()
+  c = conn.cursor()
+
+  # A. Mantener o crear la tabla base de recintos
+  c.execute("""
+        CREATE TABLE IF NOT EXISTS recintos_levantamiento (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            proyecto_id TEXT,
+            nombre_recinto TEXT,
+            elemento_constructivo TEXT,
+            estado_diagnostico TEXT,
+            patologia_observada TEXT,
+            datos_tecnicos_json TEXT,
+            observaciones_ito TEXT,
+            puntos_enchufes INTEGER DEFAULT 0,
+            centros_iluminacion INTEGER DEFAULT 0,
+            interruptores INTEGER DEFAULT 0,
+            puntos_fuerza_clima INTEGER DEFAULT 0,
+            estado_canalizacion TEXT DEFAULT ''
+        )
+    """)
+
+  # Verificar adición no destructiva de la columna JSON
+  c.execute("PRAGMA table_info(recintos_levantamiento)")
+  columns = [row["name"] for row in c.fetchall()]
+  if "datos_tecnicos_json" not in columns:
+    c.execute(
+        "ALTER TABLE recintos_levantamiento ADD COLUMN datos_tecnicos_json"
+        " TEXT"
+    )
+
+  # B. Tabla Maestra de Partidas
+  c.execute("""
+        CREATE TABLE IF NOT EXISTS biblioteca_partidas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo_partida TEXT UNIQUE NOT NULL,
+            nombre_partida TEXT NOT NULL,
+            categoria_sistema TEXT NOT NULL,
+            unidad_medida TEXT NOT NULL,
+            plantilla_eett_base TEXT
+        )
+    """)
+
+  # C. Tabla Maestra de Preguntas Dinámicas
+  c.execute("""
+        CREATE TABLE IF NOT EXISTS biblioteca_preguntas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            partida_id INTEGER NOT NULL,
+            campo_id TEXT NOT NULL,
+            etiqueta TEXT NOT NULL,
+            tipo_input TEXT NOT NULL, -- 'number', 'select', 'text', 'boolean'
+            opciones_json TEXT,       -- Lista JSON de opciones para select
+            valor_default TEXT,
+            step_val REAL DEFAULT 1.0,
+            help_text TEXT,
+            orden INTEGER DEFAULT 0,
+            FOREIGN KEY (partida_id) REFERENCES biblioteca_partidas(id)
+        )
+    """)
+
+  # D. Tabla Maestra de Reglas de Materiales y Dependencias
+  c.execute("""
+        CREATE TABLE IF NOT EXISTS biblioteca_materiales_reglas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            partida_id INTEGER NOT NULL,
+            insumo_nombre TEXT NOT NULL,
+            unidad TEXT NOT NULL,
+            es_dependencia_secundaria INTEGER DEFAULT 0, -- 0: Principal, 1: Dependiente
+            formula_cantidad TEXT NOT NULL,               -- Expresión o regla técnica
+            porcentaje_merma REAL DEFAULT 0.0,
+            FOREIGN KEY (partida_id) REFERENCES biblioteca_partidas(id)
+        )
+    """)
+
+  # E. Tabla Maestra de APU Base (Estructura de Costos Directos)
+  c.execute("""
+        CREATE TABLE IF NOT EXISTS biblioteca_apu_base (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            partida_id INTEGER NOT NULL,
+            codigo_insumo TEXT NOT NULL,
+            tipo_recurso TEXT NOT NULL, -- 'Material', 'Mano_Obra', 'Equipo'
+            unidad TEXT NOT NULL,
+            rendimiento_unitario REAL NOT NULL,
+            precio_unitario_clp REAL NOT NULL,
+            FOREIGN KEY (partida_id) REFERENCES biblioteca_partidas(id)
+        )
+    """)
+
+  conn.commit()
+  conn.close()
+  poblar_biblioteca_baño()
+
+
+# ==============================================================================
+# 2. POBLAMIENTO INICIAL: CASO DE PRUEBA REMODELACIÓN DE BAÑO
+# ==============================================================================
+def poblar_biblioteca_baño():
+  """Inserta los esquemas técnicos completos para las partidas del Baño de Prueba."""
+  conn = get_connection()
+  c = conn.cursor()
+
+  partidas_baño = [
+      {
+          "codigo": "PAR_TAB_MURO",
+          "nombre": "Tabiquería / Muros",
+          "categoria": "Estructuras y Tabiques",
+          "unidad": "m²",
+          "eett": (
+              "Suministro e instalación de tabique estructural en perfilería"
+              " Metalcom galvanizada Cintas/Montantes 60CA08 a 40cm."
+              " Revestimiento en placas Volcanita RH de 12.5mm fijadas con"
+              " tornillos trompeta, aislación interna y tratamiento completo"
+              " de juntas."
+          ),
+          "preguntas": [
+              {
+                  "campo": "largo",
+                  "etiqueta": "Largo del Muro/Tabique (m):",
+                  "tipo": "number",
+                  "val": "2.5",
+                  "step": 0.1,
+                  "help": "Longitud lineal",
+                  "orden": 1,
+              },
+              {
+                  "campo": "alto",
+                  "etiqueta": "Alto Comercial (m):",
+                  "tipo": "number",
+                  "val": "2.4",
+                  "step": 0.1,
+                  "help": "Altura piso a cielo",
+                  "orden": 2,
+              },
+              {
+                  "campo": "tipo_estructura",
+                  "etiqueta": "Estructura Soporte:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Metalcom 60CA08 (Galvanizado)",
+                      "Metalcom 90CA08",
+                      "Pino 2x3 pulgadas",
+                  ],
+                  "val": "Metalcom 60CA08 (Galvanizado)",
+                  "orden": 3,
+              },
+              {
+                  "campo": "separacion_montantes",
+                  "etiqueta": "Separación Montantes:",
+                  "tipo": "select",
+                  "opciones": ["40 cm (Zona Húmeda)", "60 cm"],
+                  "val": "40 cm (Zona Húmeda)",
+                  "orden": 4,
+              },
+              {
+                  "campo": "placa_interior",
+                  "etiqueta": "Placa de Revestimiento:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Volcanita RH 12.5mm",
+                      "Permanit Fibrocemento 6mm",
+                  ],
+                  "val": "Volcanita RH 12.5mm",
+                  "orden": 5,
+              },
+              {
+                  "campo": "aislacion",
+                  "etiqueta": "Aislación Interna:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Lana Mineral 50mm",
+                      "Lana de Vidrio 50mm",
+                      "Sin Aislación",
+                  ],
+                  "val": "Lana Mineral 50mm",
+                  "orden": 6,
+              },
+              {
+                  "campo": "impermeabilizacion",
+                  "etiqueta": "Impermeabilización Zócalo:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Membrana Elástica Acrílica + Malla",
+                      "Sin Impermeabilización",
+                  ],
+                  "val": "Membrana Elástica Acrílica + Malla",
+                  "orden": 7,
+              },
+          ],
+      },
+      {
+          "codigo": "PAR_PISO_CER",
+          "nombre": "Piso / Revestimiento Ceramicado",
+          "categoria": "Terminaciones de Piso",
+          "unidad": "m²",
+          "eett": (
+              "Instalación de pavimento cerámico/porcelanato antideslizante para"
+              " zonas húmedas, asentado con adhesivo impermeable Bekron AC,"
+              " fraguado de alta resistencia y sello perimetral."
+          ),
+          "preguntas": [
+              {
+                  "campo": "largo_piso",
+                  "etiqueta": "Largo del Piso (m):",
+                  "tipo": "number",
+                  "val": "2.0",
+                  "step": 0.1,
+                  "orden": 1,
+              },
+              {
+                  "campo": "ancho_piso",
+                  "etiqueta": "Ancho del Piso (m):",
+                  "tipo": "number",
+                  "val": "1.8",
+                  "step": 0.1,
+                  "orden": 2,
+              },
+              {
+                  "campo": "tipo_ceramica",
+                  "etiqueta": "Tipo de Ceramica/Porcelanato:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Cerámica Antideslizante 33x33",
+                      "Porcelanato 60x60",
+                  ],
+                  "val": "Cerámica Antideslizante 33x33",
+                  "orden": 3,
+              },
+              {
+                  "campo": "adhesivo",
+                  "etiqueta": "Tipo de Adhesivo:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Bekron AC (Pasta Zona Húmeda)",
+                      "Bekron Standard",
+                  ],
+                  "val": "Bekron AC (Pasta Zona Húmeda)",
+                  "orden": 4,
+              },
+          ],
+      },
+      {
+          "codigo": "PAR_ELE_ENCHUFE",
+          "nombre": "Electricidad - Enchufes",
+          "categoria": "Instalación Eléctrica",
+          "unidad": "ptos",
+          "eett": (
+              "Suministro e instalación de puntos de enchufe monofásicos"
+              " embutidos, canalizados en tubería conduit rígida 20mm con"
+              " conductores EVA 2.5mm² libre de halógenos conforme norma RIC N°04."
+          ),
+          "preguntas": [
+              {
+                  "campo": "num_enchufes",
+                  "etiqueta": "Cantidad de Puntos de Enchufe Doble:",
+                  "tipo": "number",
+                  "val": "2",
+                  "step": 1.0,
+                  "orden": 1,
+              },
+              {
+                  "campo": "canalizacion",
+                  "etiqueta": "Canalización:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Conduit Rígido PVC 20mm",
+                      "Tubería Flexible 20mm",
+                  ],
+                  "val": "Conduit Rígido PVC 20mm",
+                  "orden": 2,
+              },
+              {
+                  "campo": "conductor",
+                  "etiqueta": "Conductor Eléctrico:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Cable EVA H07Z1-K 2.5 mm²",
+                      "Cable NYA 2.5 mm²",
+                  ],
+                  "val": "Cable EVA H07Z1-K 2.5 mm²",
+                  "orden": 3,
+              },
+              {
+                  "campo": "proteccion_dif",
+                  "etiqueta": "Protección Diferencial:",
+                  "tipo": "select",
+                  "opciones": [
+                      "Interruptor Diferencial 2x25A 30mA",
+                      "Existente en Tablero",
+                  ],
+                  "val": "Interruptor Diferencial 2x25A 30mA",
+                  "orden": 4,
+              },
+          ],
+      },
+  ]
+
+  for p in partidas_baño:
+    c.execute(
+        """
+            INSERT OR REPLACE INTO biblioteca_partidas 
+            (codigo_partida, nombre_partida, categoria_sistema, unidad_medida, plantilla_eett_base)
+            VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            p["codigo"],
+            p["nombre"],
+            p["categoria"],
+            p["unidad"],
+            p["eett"],
+        ),
+    )
+
+    partida_id = c.lastrowid or c.execute(
+        "SELECT id FROM biblioteca_partidas WHERE codigo_partida=?",
+        (p["codigo"],),
+    ).fetchone()[0]
+
+    # Limpiar e insertar preguntas relacionales
+    c.execute(
+        "DELETE FROM biblioteca_preguntas WHERE partida_id=?", (partida_id,)
+    )
+    for q in p["preguntas"]:
+      opciones_str = json.dumps(q.get("opciones", []))
+      c.execute(
+          """
+                INSERT INTO biblioteca_preguntas 
+                (partida_id, campo_id, etiqueta, tipo_input, opciones_json, valor_default, step_val, help_text, orden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+          (
+              partida_id,
+              q["campo"],
+              q["etiqueta"],
+              q["tipo"],
+              opciones_str,
+              q["val"],
+              q.get("step", 1.0),
+              q.get("help", ""),
+              q["orden"],
+          ),
+      )
+
+  conn.commit()
+  conn.close()
+
+
+# ==============================================================================
+# 3. CONSULTA DINÁMICA DE PREGUNTAS POR PARTIDA
+# ==============================================================================
+def obtener_configuracion_partida(nombre_o_codigo):
+  """Retorna la lista de preguntas relacionales para la partida seleccionada."""
+  conn = get_connection()
+  c = conn.cursor()
+
+  c.execute(
+      """
+        SELECT id, codigo_partida, nombre_partida, categoria_sistema, unidad_medida, plantilla_eett_base 
+        FROM biblioteca_partidas 
+        WHERE nombre_partida = ? OR codigo_partida = ?
+    """,
+      (nombre_o_codigo, nombre_o_codigo),
   )
-  respuestas = {}
 
-  st.markdown(
-      f"#### ⚙️ Parámetros Técnicos: **{config['categoria']}**"
+  partida = c.fetchone()
+  if not partida:
+    conn.close()
+    return None
+
+  p_id = partida["id"]
+  c.execute(
+      """
+        SELECT campo_id, etiqueta, tipo_input, opciones_json, valor_default, step_val, help_text
+        FROM biblioteca_preguntas 
+        WHERE partida_id = ? 
+        ORDER BY orden ASC
+    """,
+      (p_id,),
   )
 
-  for q in config["preguntas"]:
-    q_id = q["id"]
-    q_label = q["label"]
-    q_tipo = q["tipo"]
+  preguntas_rows = c.fetchall()
+  preguntas = []
+  for pr in preguntas_rows:
+    preguntas.append({
+        "campo_id": pr["campo_id"],
+        "etiqueta": pr["etiqueta"],
+        "tipo_input": pr["tipo_input"],
+        "opciones": json.loads(pr["opciones_json"])
+        if pr["opciones_json"]
+        else [],
+        "valor_default": pr["valor_default"],
+        "step_val": pr["step_val"],
+        "help_text": pr["help_text"],
+    })
 
-    if q_tipo == "number":
-      respuestas[q_id] = st.number_input(
-          label=q_label,
-          min_value=0.0 if isinstance(q["default"], float) else 0,
-          value=q["default"],
-          step=q.get("step", 1),
-          help=q.get("help", ""),
-          key=f"dyn_{q_id}",
-      )
-    elif q_tipo == "select":
-      respuestas[q_id] = st.selectbox(
-          label=q_label,
-          options=q["opciones"],
-          index=q["opciones"].index(q["default"])
-          if q["default"] in q["opciones"]
-          else 0,
-          help=q.get("help", ""),
-          key=f"dyn_{q_id}",
-      )
-    elif q_tipo == "text":
-      respuestas[q_id] = st.text_input(
-          label=q_label,
-          value=q.get("default", ""),
-          help=q.get("help", ""),
-          key=f"dyn_{q_id}",
-      )
-
-  return respuestas
+  conn.close()
+  return {
+      "id": p_id,
+      "codigo": partida["codigo_partida"],
+      "nombre": partida["nombre_partida"],
+      "categoria": partida["categoria_sistema"],
+      "unidad": partida["unidad_medida"],
+      "eett_base": partida["plantilla_eett_base"],
+      "preguntas": preguntas,
+  }
 
 
-def calcular_materiales_partida(elemento_seleccionado, respuestas):
-  """Motor de Cubicación Paramétrico: Transforma las respuestas técnicas
+# ==============================================================================
+# 4. MOTOR DE CUBICACIÓN TÉCNICA, MATERIALES Y DEPENDENCIAS
+# ==============================================================================
+def calcular_cubicacion_y_apu(nombre_partida, respuestas_dict):
+  """Calcula geométricamente las cantidades reales, mermas, materiales dependientes
 
-  en una lista detallada de insumos, cantidades, mermas y unidades.
+  y la matriz APU sin requerir reingreso manual.
   """
   materiales = []
+  apu_costo_directo = []
 
-  # --------------------------------------------------------------------------
-  # 1. TABIQUERÍA Y MUROS
-  # --------------------------------------------------------------------------
-  if elemento_seleccionado == "Tabiquería / Muros":
-    largo = float(respuestas.get("largo", 0.0))
-    alto = float(respuestas.get("alto", 0.0))
+  # A. TABIQUERÍA Y MUROS
+  if "Tabiquería" in nombre_partida or "Muros" in nombre_partida:
+    largo = float(respuestas_dict.get("largo", 0.0))
+    alto = float(respuestas_dict.get("alto", 0.0))
     area_m2 = round(largo * alto, 2)
-    perimetro_m = (largo * 2) + (alto * 2)
 
-    sep_cm = 40 if "40" in str(respuestas.get("separacion_montantes")) else 60
+    sep_cm = 40 if "40" in str(respuestas_dict.get("separacion_montantes")) else 60
     distancia_m = sep_cm / 100.0
 
-    # Soleras (Superior e Inferior)
+    # Soleras (Metros lineales / Tiras 3m) con 5% merma
     ml_soleras = largo * 2
-    tiras_soleras = math.ceil((ml_soleras * 1.05) / 3.0)  # Tiras de 3m, 5% merma
+    tiras_soleras = math.ceil((ml_soleras * 1.05) / 3.0)
 
-    # Montantes
+    # Montantes con 8% merma
     num_montantes = math.ceil(largo / distancia_m) + 1
-    tiras_montantes = math.ceil(
-        (num_montantes * alto * 1.08) / 3.0
-    )  # 8% merma
+    tiras_montantes = math.ceil((num_montantes * alto * 1.08) / 3.0)
 
-    # Placas Volcanita (2 caras de revestimiento)
+    # Placas Volcanita RH (2 caras de revestimiento) con 10% merma
     area_placas_total = area_m2 * 2
-    planchas_volcanita = math.ceil(
-        (area_placas_total * 1.10) / 2.88
-    )  # Planca 1.2x2.4=2.88m², 10% merma
+    planchas_volcanita = math.ceil((area_placas_total * 1.10) / 2.88)
 
-    # Tornillos
-    tornillos_framing = math.ceil(area_m2 * 15)  # Cabeza lenteja p/estructura
-    tornillos_volcanita = math.ceil(
-        area_placas_total * 30
-    )  # Cabeza trompeta 1 5/8"
-
-    # Insumos varios
-    rollos_lana = math.ceil((area_m2 * 1.05) / 10.0)  # Rollo de 10m² aprox.
-    cinta_junta = round(area_m2 * 1.8, 1)  # Metros de cinta
-    masilla_kg = round(area_m2 * 1.2, 1)  # kg de masilla de junta
+    # Materiales Dependientes (Tornillos, Aislación, Cinta, Masilla)
+    tornillos_framing = math.ceil(area_m2 * 15)
+    tornillos_volcanita = math.ceil(area_placas_total * 30)
+    rollos_lana = math.ceil((area_m2 * 1.05) / 10.0)
+    cinta_junta_ml = round(area_m2 * 1.8, 1)
+    masilla_kg = round(area_m2 * 1.2, 1)
 
     materiales = [
         {
-            "insumo": "Soleras Cintas Galvanizadas 60CA08 (3m)",
+            "insumo": "Solera Cintas Galvanizada 60CA08 (3m)",
+            "tipo": "Principal",
             "cantidad": tiras_soleras,
             "unidad": "tiras",
         },
         {
-            "insumo": "Montantes Galvanizados 60CA08 (3m)",
+            "insumo": "Montante Galvanizado 60CA08 (3m)",
+            "tipo": "Principal",
             "cantidad": tiras_montantes,
             "unidad": "tiras",
         },
         {
-            "insumo": f"Placas {respuestas.get('tipo_placa')} (1.20x2.40m)",
+            "insumo": f"Placa {respuestas_dict.get('placa_interior')} (1.20x2.40m)",
+            "tipo": "Principal",
             "cantidad": planchas_volcanita,
             "unidad": "planchas",
         },
         {
-            "insumo": "Tornillos Metalcom Cabeza Lenteja #8x1/2",
+            "insumo": "Tornillos Cabeza Lenteja #8x1/2 (Estructura)",
+            "tipo": "Dependiente",
             "cantidad": tornillos_framing,
             "unidad": "unidades",
         },
         {
             "insumo": "Tornillos Volcanita Cabeza Trompeta 6x1-5/8",
+            "tipo": "Dependiente",
             "cantidad": tornillos_volcanita,
             "unidad": "unidades",
         },
         {
-            "insumo": f"Aislación {respuestas.get('aislacion')}",
+            "insumo": f"Aislación {respuestas_dict.get('aislacion')}",
+            "tipo": "Dependiente",
             "cantidad": rollos_lana,
-            "unidad": "rollos/paquetes",
+            "unidad": "rollos",
         },
         {
-            "insumo": "Cinta de Fibra de Vidrio / Papel para Juntas",
-            "cantidad": cinta_junta,
+            "insumo": "Cinta Junta Invisible Fibra/Papel",
+            "tipo": "Dependiente",
+            "cantidad": cinta_junta_ml,
             "unidad": "ml",
         },
         {
-            "insumo": "Masilla Junta Invisible / Pasta Muro",
+            "insumo": "Masilla Junta / Pasta Muro",
+            "tipo": "Dependiente",
             "cantidad": masilla_kg,
             "unidad": "kg",
         },
     ]
 
-    if "Membrana" in str(respuestas.get("impermeabilizacion")):
-      materiales.append({
-          "insumo": "Impermeabilizante Elástico Membrana Acrílica Zócalo (5kg)",
-          "cantidad": math.ceil(area_m2 / 4.0),
-          "unidad": "tineta(s)",
-      })
+    # Precios unitarios de referencia para APU en Chile (CLP)
+    costo_mat = (
+        (tiras_soleras * 3800)
+        + (tiras_montantes * 4200)
+        + (planchas_volcanita * 11900)
+        + (tornillos_framing * 15)
+        + (tornillos_volcanita * 20)
+        + (rollos_lana * 18500)
+    )
+    hh_carpintero = round(area_m2 * 0.45, 2)  # 0.45 HH/m²
+    costo_mo = hh_carpintero * 7500
 
-  # --------------------------------------------------------------------------
-  # 2. INSTALACIÓN ELÉCTRICA
-  # --------------------------------------------------------------------------
-  elif "Eléctrica" in elemento_seleccionado:
-    enchufes = int(respuestas.get("num_enchufes", 0))
-    centros = int(respuestas.get("num_centros", 0))
-    interruptores = int(respuestas.get("num_interruptores", 0))
+    apu_costo_directo = {
+        "m2_calculados": area_m2,
+        "costo_materiales_clp": costo_mat,
+        "hh_mano_obra": hh_carpintero,
+        "costo_mano_obra_clp": costo_mo,
+        "costo_directo_total_clp": costo_mat + costo_mo,
+    }
 
-    tot_puntos = enchufes + centros + interruptores
-    tiras_conduit = math.ceil((tot_puntos * 4.0) / 3.0)  # 4m de canaliz/punto
-    rollos_cable = math.ceil(
-        (tot_puntos * 12.0) / 100.0
-    )  # 12m cable/punto en rollos de 100m
-
-    materiales = [
-        {
-            "insumo": "Cajas de Embutiles Aislantes Condulet/Octogonales",
-            "cantidad": tot_puntos,
-            "unidad": "unidades",
-        },
-        {
-            "insumo": f"Tubería {respuestas.get('tipo_canalizacion')} (3m)",
-            "cantidad": tiras_conduit,
-            "unidad": "tiras",
-        },
-        {
-            "insumo": f"Conductor {respuestas.get('tipo_conductor')}",
-            "cantidad": rollos_cable,
-            "unidad": "rollo(s) 100m",
-        },
-        {
-            "insumo": "Módulos Enchufe Monofásico Doble 10A/16A + Placa",
-            "cantidad": enchufes,
-            "unidad": "juegos",
-        },
-        {
-            "insumo": "Interruptores Embutidos + Placa",
-            "cantidad": interruptores,
-            "unidad": "juegos",
-        },
-        {
-            "insumo": "Soquetes / Portalámparas + Cajas de Centro",
-            "cantidad": centros,
-            "unidad": "unidades",
-        },
-    ]
-
-  # --------------------------------------------------------------------------
-  # 3. PISOS Y REVESTIMIENTOS
-  # --------------------------------------------------------------------------
-  elif elemento_seleccionado == "Pisos / Revestimientos":
-    largo = float(respuestas.get("largo_piso", 0.0))
-    ancho = float(respuestas.get("ancho_piso", 0.0))
+  # B. PISO CERÁMICO
+  elif "Piso" in nombre_partida:
+    largo = float(respuestas_dict.get("largo_piso", 0.0))
+    ancho = float(respuestas_dict.get("ancho_piso", 0.0))
     area_m2 = round(largo * ancho, 2)
 
-    cajas_ceramica = math.ceil(
-        (area_m2 * 1.12) / 1.5
-    )  # 12% merma, 1.5m² por caja
-    sacos_bekron = math.ceil(area_m2 / 4.0)  # 1 saco 25kg rinde ~4m²
-    kg_fragüe = round(area_m2 * 0.5, 1)
+    cajas_ceramica = math.ceil((area_m2 * 1.12) / 1.5)  # 12% merma
+    sacos_bekron = math.ceil(area_m2 / 4.0)
+    kg_frague = round(area_m2 * 0.5, 1)
 
     materiales = [
         {
-            "insumo": f"Palmetas {respuestas.get('tipo_revestimiento')}",
+            "insumo": f"{respuestas_dict.get('tipo_ceramica')}",
+            "tipo": "Principal",
             "cantidad": cajas_ceramica,
-            "unidad": "cajas (~1.5m² c/u)",
+            "unidad": "cajas (~1.5m²)",
         },
         {
-            "insumo": f"Adhesivo {respuestas.get('tipo_adhesivo')} (25kg)",
+            "insumo": f"Adhesivo {respuestas_dict.get('adhesivo')} (25kg)",
+            "tipo": "Dependiente",
             "cantidad": sacos_bekron,
             "unidad": "sacos/tinetas",
         },
         {
-            "insumo": "Fragüe Impresionable para Juntas Zonas Húmedas",
-            "cantidad": kg_fragüe,
+            "insumo": "Fragüe Impermeable Zonas Húmedas",
+            "tipo": "Dependiente",
+            "cantidad": kg_frague,
             "unidad": "kg",
         },
         {
-            "insumo": "Crucetas Separadoras Plásticas 2mm / 3mm",
+            "insumo": "Crucetas Separadoras Plásticas",
+            "tipo": "Dependiente",
             "cantidad": 1,
             "unidad": "bolsa(100un)",
         },
     ]
 
-  # --------------------------------------------------------------------------
-  # 4. CIELOS
-  # --------------------------------------------------------------------------
-  elif elemento_seleccionado == "Cielo Falso / Aislación":
-    largo = float(respuestas.get("largo_cielo", 0.0))
-    ancho = float(respuestas.get("ancho_cielo", 0.0))
-    area_m2 = round(largo * ancho, 2)
+    costo_mat = (cajas_ceramica * 14900) + (sacos_bekron * 11500) + (kg_frague * 2200)
+    hh_instalador = round(area_m2 * 0.6, 2)
+    costo_mo = hh_instalador * 8000
 
-    planchas = math.ceil((area_m2 * 1.10) / 2.88)
-    rollos_lana = math.ceil((area_m2 * 1.05) / 10.0)
+    apu_costo_directo = {
+        "m2_calculados": area_m2,
+        "costo_materiales_clp": costo_mat,
+        "hh_mano_obra": hh_instalador,
+        "costo_mano_obra_clp": costo_mo,
+        "costo_directo_total_clp": costo_mat + costo_mo,
+    }
+
+  # C. ELECTRICIDAD ENCHUFES
+  elif "Electricidad" in nombre_partida or "Enchufes" in nombre_partida:
+    ptos = int(respuestas_dict.get("num_enchufes", 0))
+
+    tiras_conduit = math.ceil((ptos * 4.0) / 3.0)
+    rollos_cable = math.ceil((ptos * 12.0) / 100.0)
 
     materiales = [
         {
-            "insumo": f"Placas {respuestas.get('tipo_placa_cielo')} (1.2x2.4m)",
-            "cantidad": planchas,
-            "unidad": "planchas",
+            "insumo": "Módulos Enchufe Doble 10A/16A + Placa",
+            "tipo": "Principal",
+            "cantidad": ptos,
+            "unidad": "juegos",
         },
         {
-            "insumo": f"Aislación {respuestas.get('aislacion_cielo')}",
-            "cantidad": rollos_lana,
-            "unidad": "rollos",
-        },
-        {
-            "insumo": "Perfiles Omega / Portantes Galvanizados Cielos (3m)",
-            "cantidad": math.ceil((area_m2 * 1.5) / 3.0),
+            "insumo": f"Tubería {respuestas_dict.get('canalizacion')} (3m)",
+            "tipo": "Dependiente",
+            "cantidad": tiras_conduit,
             "unidad": "tiras",
+        },
+        {
+            "insumo": f"Conductor {respuestas_dict.get('conductor')}",
+            "tipo": "Dependiente",
+            "cantidad": rollos_cable,
+            "unidad": "rollo(s) 100m",
+        },
+        {
+            "insumo": "Cajas de Embutir Aislantes Condulet",
+            "tipo": "Dependiente",
+            "cantidad": ptos,
+            "unidad": "unidades",
         },
     ]
 
-  return materiales
+    costo_mat = (ptos * 4500) + (tiras_conduit * 1800) + (rollos_cable * 32000)
+    hh_electricista = round(ptos * 1.2, 2)
+    costo_mo = hh_electricista * 9500
+
+    apu_costo_directo = {
+        "puntos_calculados": ptos,
+        "costo_materiales_clp": costo_mat,
+        "hh_mano_obra": hh_electricista,
+        "costo_mano_obra_clp": costo_mo,
+        "costo_directo_total_clp": costo_mat + costo_mo,
+    }
+
+  return {"materiales": materiales, "apu": apu_costo_directo}
+
+
+# Inicialización automática al cargar el módulo
+inicializar_fase1_db()
