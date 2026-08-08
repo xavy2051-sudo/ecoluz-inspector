@@ -268,9 +268,6 @@ CONFIGURACION_PARTIDAS = {
 # ------------------------------------------------------------------------------
 # INICIALIZACIÓN DE TABLAS MAESTRAS
 # ------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-# INICIALIZACIÓN DE TABLAS MAESTRAS
-# ------------------------------------------------------------------------------
 def inicializar_fase1_db():
   conn = get_connection()
   c = conn.cursor()
@@ -289,7 +286,6 @@ def inicializar_fase1_db():
         )
     """)
 
-  # Recrea la tabla del catálogo maestro para sincronizar el esquema
   c.execute("DROP TABLE IF EXISTS biblioteca_partidas")
 
   c.execute("""
@@ -312,6 +308,10 @@ def inicializar_fase1_db():
 
   conn.commit()
   conn.close()
+
+
+def obtener_lista_partidas():
+  """Retorna la lista de todas las partidas registradas."""
   return list(CONFIGURACION_PARTIDAS.keys())
 
 
@@ -332,7 +332,6 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
       "costo_directo_total_clp": 0,
   }
 
-  # 1. TABIQUERÍA / MUROS
   if nombre_partida == "Tabiquería / Muros":
     largo = float(datos_usuario.get("largo", 3.0))
     alto = float(datos_usuario.get("alto", 2.4))
@@ -412,7 +411,6 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(area * 0.38, 2)
 
-  # 2. PISO CERAMICADO
   elif nombre_partida == "Piso / Revestimiento Ceramicado":
     largo = float(datos_usuario.get("largo_piso", 2.0))
     ancho = float(datos_usuario.get("ancho_piso", 1.5))
@@ -420,8 +418,8 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
     adhesivo = datos_usuario.get("adhesivo", "Bekron AC")
 
     area = largo * ancho
-    cajas = math.ceil((area * 1.10) / 1.8)  # Rinde ~1.8m2 por caja
-    sacos_adhesivo = math.ceil(area / 4.0)  # ~4m2 por saco de 25kg
+    cajas = math.ceil((area * 1.10) / 1.8)
+    sacos_adhesivo = math.ceil(area / 4.0)
     frague_kg = round(area * 0.5, 1)
 
     materiales.append({
@@ -455,7 +453,6 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(area * 0.5, 2)
 
-  # 3. ELECTRICIDAD ENCHUFES
   elif nombre_partida == "Electricidad - Enchufes":
     puntos = int(datos_usuario.get("puntos_enchufe", 2))
     canal = datos_usuario.get("tipo_canalizacion", "Embutida Conduit 20mm")
@@ -491,7 +488,6 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(puntos * 1.2, 2)
 
-  # 4. CIELO FALSO
   elif nombre_partida == "Cielo / Cielo Falso":
     largo = float(datos_usuario.get("largo_cielo", 2.0))
     ancho = float(datos_usuario.get("ancho_cielo", 1.5))
@@ -525,13 +521,12 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(area * 0.45, 2)
 
-  # 5. PINTURA / EMPASTE
   elif nombre_partida == "Pintura / Empaste":
     area = float(datos_usuario.get("superficie_pintura", 14.4))
     tipo_p = datos_usuario.get("tipo_pintura", "Esmalte al Agua RH")
     manos = int(datos_usuario.get("manos", 2))
 
-    tinetas = math.ceil((area * manos) / 40.0)  # Rinde ~40m2/tineta 1 galón
+    tinetas = math.ceil((area * manos) / 40.0)
     pasta_kg = round(area * 0.8, 1)
 
     materiales.append({
@@ -558,7 +553,6 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(area * 0.25, 2)
 
-  # 6. INSTALACIONES SANITARIAS / ARTEFACTOS
   elif nombre_partida == "Instalaciones Sanitarias / Artefactos":
     puntos = int(datos_usuario.get("puntos_agua", 3))
     artefacto = datos_usuario.get(
@@ -599,7 +593,6 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(puntos * 2.5, 2)
 
-  # 7. ILUMINACIÓN
   elif nombre_partida == "Iluminación - Puntos de Luz":
     puntos = int(datos_usuario.get("puntos_luz", 2))
     foco = datos_usuario.get("tipo_foco", "Panel LED Empotrado 18W")
@@ -628,8 +621,7 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(puntos * 1.0, 2)
 
-  # 8. PUERTAS Y CERRAJERÍA
-  else:
+  else:  # Puertas y Cerrajería
     cant = int(datos_usuario.get("cantidad_puertas", 1))
     tipo_p = datos_usuario.get(
         "tipo_puerta", "Puerta Masonite/MDF Prepintada"
@@ -643,7 +635,7 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
         "precio_unit_clp": 32000,
     })
     materiales.append({
-        "insumo": "Marco Puino / MDF 35x70mm Set Completo",
+        "insumo": "Marco Pino / MDF 35x70mm Set Completo",
         "tipo": "Dependiente",
         "cantidad": cant,
         "unidad": "sets",
@@ -666,9 +658,8 @@ def calcular_cubicacion_y_apu(nombre_partida, datos_usuario):
 
     hh = round(cant * 3.0, 2)
 
-  # CÁLCULO FINANCIERO DEL APU
   costo_mat = sum(m["cantidad"] * m["precio_unit_clp"] for m in materiales)
-  costo_mo = int(hh * 7500)  # Valor HH promedio $7.500 CLP
+  costo_mo = int(hh * 7500)
 
   apu["costo_materiales_clp"] = costo_mat
   apu["costo_mano_obra_clp"] = costo_mo
