@@ -10,19 +10,21 @@ import streamlit as st
 
 # Importación de la Biblioteca Técnica Desacoplada
 from biblioteca_tecnica import (
-    obtener_configuracion_partida,
     calcular_cubicacion_y_apu,
     inicializar_fase1_db,
+    obtener_configuracion_partida,
+    obtener_lista_partidas,
 )
 
-st.set_page_config(page_title="ECOLUZ - Inspector Técnico", layout="wide")
+st.set_page_config(
+    page_title="ECOLUZ - Inspector Técnico",
+    page_icon="👷‍♂️",
+    layout="wide",
+)
 
-# Inicialización de tablas relacionales de la Biblioteca Técnica
+# Inicialización de la base de datos relacional
 inicializar_fase1_db()
 
-# ------------------------------------------------------------------------------
-# BASE DE DATOS Y CONEXIÓN
-# ------------------------------------------------------------------------------
 DB_FILE = "ecoluz_database.db"
 
 
@@ -118,6 +120,9 @@ elif modulo == "📊 2. Inspección en Terreno (Recintos y Patologías)":
 
   cr1, cr2 = st.columns([1, 1])
 
+  # Obtener lista completa de partidas directamente desde la biblioteca
+  partidas_disponibles = obtener_lista_partidas()
+
   with cr1:
     st.subheader("1. Ubicación y Partida")
     recinto = st.selectbox(
@@ -132,12 +137,7 @@ elif modulo == "📊 2. Inspección en Terreno (Recintos y Patologías)":
     )
 
     partida_nombre = st.selectbox(
-        "Elemento Constructivo / Partida:",
-        [
-            "Tabiquería / Muros",
-            "Piso / Revestimiento Ceramicado",
-            "Electricidad - Enchufes",
-        ],
+        "Elemento Constructivo / Partida:", partidas_disponibles
     )
 
     diagnostico = st.selectbox(
@@ -153,8 +153,8 @@ elif modulo == "📊 2. Inspección en Terreno (Recintos y Patologías)":
   with cr2:
     st.subheader(f"2. Parámetros Técnicos: {partida_nombre}")
 
-    if config_partida and config_partida["preguntas"]:
-      st.caption(f"Categoría: {config_partida['categoria']}")
+    if config_partida and config_partida.get("preguntas"):
+      st.caption(f"Categoría: {config_partida.get('categoria', 'General')}")
 
       for q in config_partida["preguntas"]:
         campo_id = q["campo_id"]
@@ -163,7 +163,7 @@ elif modulo == "📊 2. Inspección en Terreno (Recintos y Patologías)":
         val_def = q["valor_default"]
 
         if tipo == "number":
-          val_float = float(val_def) if val_def else 0.0
+          val_float = float(val_def) if val_def is not None else 0.0
           respuestas_usuario[campo_id] = st.number_input(
               label,
               value=val_float,
@@ -184,8 +184,6 @@ elif modulo == "📊 2. Inspección en Terreno (Recintos y Patologías)":
           respuestas_usuario[campo_id] = st.text_input(
               label, value=val_def, key=f"dyn_{partida_nombre}_{campo_id}"
           )
-    else:
-      st.warning("No hay preguntas registradas para esta partida.")
 
   st.markdown("---")
 
@@ -249,5 +247,5 @@ else:
   st.header(modulo)
   st.info(
       "Módulo activo y conectado a la base de datos relacional. Selecciona"
-      " 'Inspección en Terreno' para probar la dynamic UI del Baño."
+      " 'Inspección en Terreno' para probar la dynamic UI completa."
   )
