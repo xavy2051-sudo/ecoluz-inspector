@@ -268,6 +268,9 @@ CONFIGURACION_PARTIDAS = {
 # ------------------------------------------------------------------------------
 # INICIALIZACIÓN DE TABLAS MAESTRAS
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# INICIALIZACIÓN DE TABLAS MAESTRAS
+# ------------------------------------------------------------------------------
 def inicializar_fase1_db():
   conn = get_connection()
   c = conn.cursor()
@@ -285,6 +288,9 @@ def inicializar_fase1_db():
             fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+  # Recrea la tabla del catálogo maestro para sincronizar el esquema
+  c.execute("DROP TABLE IF EXISTS biblioteca_partidas")
 
   c.execute("""
         CREATE TABLE IF NOT EXISTS biblioteca_partidas (
@@ -306,10 +312,6 @@ def inicializar_fase1_db():
 
   conn.commit()
   conn.close()
-
-
-def obtener_lista_partidas():
-  """Retorna la lista de todas las partidas registradas."""
   return list(CONFIGURACION_PARTIDAS.keys())
 
 
